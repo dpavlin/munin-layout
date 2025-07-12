@@ -157,8 +157,9 @@
          * @returns {Array<Object>} The full array of switch data objects with an `isActive` flag.
          */
         function generateSwitchData(activeNames, commentedNames) {
-            const GRAPH_URL_TEMPLATE = "///munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
-            const DETAILS_URL_TEMPLATE = "///munin.ffzg.hr/snmp/{ID}/index.html";
+            // *** FIX APPLIED HERE: URLs now use https:// ***
+            const GRAPH_URL_TEMPLATE = "https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
+            const DETAILS_URL_TEMPLATE = "https://munin.ffzg.hr/snmp/{ID}/index.html";
 
             const createObject = (displayName, isActive) => {
                 const urlId = displayName.split(' ')[0];
