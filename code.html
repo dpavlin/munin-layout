@@ -13,33 +13,68 @@
             color: #333;
         }
 
-        /* --- MODIFIED: Inline Filter Bar --- */
+        /* --- Inline Filter Bar --- */
         #filter-container {
             display: none; /* Hidden by default */
-            padding: 20px 0;
-            text-align: center;
-            background-color: #e9ecef; /* A slightly different background to distinguish it */
+            position: relative; /* Anchor for the close button */
+            padding: 20px 50px 20px 20px; /* Extra padding on the right for the close button */
+            background-color: #e9ecef;
             border-bottom: 1px solid #dee2e6;
+            flex-wrap: wrap;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
         }
 
         #filter-input {
             width: 50%;
-            max-width: 600px;
+            max-width: 500px;
             padding: 12px 20px;
             font-size: 18px;
             border-radius: 50px;
             border: 1px solid #ccc;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         #filter-input:focus {
             outline: none;
             border-color: #007bff;
         }
+        
+        /* Zoom Slider Control */
+        .zoom-control {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #555;
+        }
+        #zoom-slider {
+            width: 150px;
+        }
 
-        /* 4-Column Grid Layout */
+        /* --- MODIFIED: Close Button --- */
+        #close-btn {
+            position: absolute;
+            top: 50%;
+            right: 15px;
+            transform: translateY(-50%);
+            background: transparent;
+            border: none;
+            font-size: 28px;
+            color: #6c757d;
+            cursor: pointer;
+            padding: 0 10px;
+            line-height: 1;
+        }
+        #close-btn:hover {
+            color: #343a40;
+        }
+
+
+        /* Dynamic Grid Layout */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            --card-zoom-factor: 1; 
+            --card-base-width: 280px; 
+            grid-template-columns: repeat(auto-fill, minmax(calc(var(--card-base-width) * var(--card-zoom-factor)), 1fr));
             gap: 15px;
             padding: 15px;
         }
@@ -89,33 +124,24 @@
         
         /* Usability Hint */
         .hint {
-            position: fixed;
-            bottom: 10px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 12px;
-            opacity: 1;
-            transition: opacity 0.5s ease 2s;
-            pointer-events: none;
+            position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7);
+            color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; opacity: 1;
+            transition: opacity 0.5s ease 2s; pointer-events: none;
         }
         .hint--hidden {
             opacity: 0;
         }
-
-        /* Responsive adjustments */
-        @media (max-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 600px) { .dashboard-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
     <div id="filter-container">
         <input type="text" id="filter-input">
+        <div class="zoom-control">
+            <label for="zoom-slider">Zoom:</label>
+            <input type="range" id="zoom-slider" min="50" max="200" value="100">
+        </div>
+        <button id="close-btn" title="Close (Esc)">&times;</button>
     </div>
 
     <main class="dashboard-grid" id="dashboard-grid">
@@ -138,13 +164,14 @@
             return activeNames.map(name => createObject(name, true)).concat(commentedNames.map(name => createObject(name, false)));
         }
 
-        // --- DOM ELEMENTS AND STATE ---
+        // --- DOM ELEMENTS ---
         const grid = document.getElementById('dashboard-grid');
         const filterContainer = document.getElementById('filter-container');
         const filterInput = document.getElementById('filter-input');
+        const zoomSlider = document.getElementById('zoom-slider');
+        const closeBtn = document.getElementById('close-btn');
         const hint = document.getElementById('hint');
         const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
-        let hideTimeoutId = null;
 
         // --- FUNCTIONS ---
         function renderSwitches(switches) {
@@ -169,37 +196,38 @@
         
         function hideFilter() {
             filterInput.value = '';
-            filterContainer.style.display = 'none'; // Hide the container
+            filterContainer.style.display = 'none';
             runFilter(); // Reset view to all switches
         }
 
         // --- EVENT LISTENERS ---
         filterInput.addEventListener('keyup', runFilter);
-        filterInput.addEventListener('blur', () => { hideTimeoutId = setTimeout(hideFilter, 200); });
-        filterInput.addEventListener('focus', () => { clearTimeout(hideTimeoutId); });
+        
+        zoomSlider.addEventListener('input', () => {
+            grid.style.setProperty('--card-zoom-factor', zoomSlider.value / 100);
+        });
+
+        closeBtn.addEventListener('click', hideFilter);
 
         window.addEventListener('keydown', (event) => {
-            // Check if the user is already typing in an input
-            if (document.activeElement === filterInput) return;
-
-            // Use Escape key to hide the filter and reset
+            // If the user presses Escape, hide the filter.
             if (event.key === 'Escape') {
                 hideFilter();
                 return;
             }
+            
+            // Do nothing if the user is already typing in an input.
+            if (document.activeElement === filterInput || document.activeElement === zoomSlider) return;
 
-            // Ignore keystrokes with modifiers or special keys (like "Shift", "Control")
-            if (event.metaKey || event.ctrlKey || event.altKey || event.key.length > 1) {
-                return;
+            // Only activate on single character keys (ignore Ctrl, Shift, etc.).
+            if (event.key.length === 1) {
+                filterContainer.style.display = 'flex'; // Show the header
+                filterInput.focus();
+                filterInput.value = event.key;
+                runFilter();
+                
+                event.preventDefault(); // Prevent the key from being typed anywhere else.
             }
-            
-            // On the first valid keypress, show and prime the filter.
-            filterContainer.style.display = 'block'; // Make the container visible
-            filterInput.focus();
-            filterInput.value = event.key;
-            runFilter();
-            
-            event.preventDefault(); // Stop the key from being typed anywhere else
         });
 
         // --- INITIALIZATION ---
