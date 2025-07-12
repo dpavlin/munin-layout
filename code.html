@@ -11,7 +11,7 @@
             background-color: #f0f2f5;
             margin: 0;
             color: #333;
-            overflow-x: hidden; /* Prevent horizontal scrollbars from main page */
+            overflow-x: hidden;
         }
 
         /* --- Inline Filter Bar --- */
@@ -75,41 +75,43 @@
         /* --- MODIFIED: Overlay System --- */
         #overlay-wrapper {
             display: none; /* Hidden by default */
-            width: 100%;
+            width: 95%;
+            max-width: 1200px;
             margin: 20px auto;
         }
-        /* Stacked View (Default Overlay) */
-        #stacked-view {
-            display: flex;
-            width: 95%;
-            max-width: 1400px;
-            margin: 0 auto;
-            gap: 20px;
+        #overlay-container { 
+            position: relative; 
+            background-color: #fff; /* White background for correct blending */
+            border: 1px solid #ccc;
         }
-        #stacked-container { flex: 3; position: relative; background-color: #fff; border: 1px solid #ccc; }
-        #stacked-container img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.15; transition: opacity 0.2s ease-in-out; }
-        #stacked-container img.is-highlighted { opacity: 1; z-index: 10; }
-        #stacked-legend { flex: 1; max-height: 75vh; overflow-y: auto; background-color: #fff; border: 1px solid #ccc; padding: 5px; }
-        .legend-item { padding: 8px 12px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; font-size: 14px; }
-        .legend-item.is-highlighted { background-color: #e9ecef; }
+        #overlay-container img {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* mix-blend-mode and opacity are now controlled by JS */
+            transition: opacity 0.2s ease-in-out;
+            pointer-events: none; /* Images don't need to be interactive */
+        }
         
-        /* Exploded View (Horizontal Strip on hover) */
-        #exploded-view {
-            display: none; /* Hidden until triggered */
-            flex-direction: row;
-            align-items: center;
-            overflow-x: auto;
-            padding: 20px;
-            gap: 15px;
-            background: #d8dcdf;
+        #overlay-switch-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            padding: 15px;
+            margin-top: 10px;
+            background: #fff;
+            border: 1px solid #ccc;
         }
-        .exploded-item { text-align: center; flex-shrink: 0; opacity: 0.4; transition: opacity 0.2s; }
-        .exploded-item img { max-height: 300px; border: 1px solid #aaa; }
-        .exploded-item span { display: block; margin-top: 5px; font-weight: bold; }
-        /* Highlight on hover for exploded view */
-        #exploded-view:hover .exploded-item { opacity: 0.2; }
-        #exploded-view .exploded-item:hover { opacity: 1; }
-
+        .switch-list-item {
+            padding: 5px 10px;
+            background-color: #f1f1f1;
+            border-radius: 5px;
+            cursor: default;
+            font-size: 13px;
+        }
+        
         /* Usability Hint */
         .hint {
             position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7);
@@ -133,11 +135,8 @@
     <main>
         <div class="dashboard-grid" id="dashboard-grid"></div>
         <div id="overlay-wrapper">
-            <div id="stacked-view">
-                <div id="stacked-container"></div>
-                <div id="stacked-legend"></div>
-            </div>
-            <div id="exploded-view"></div>
+            <div id="overlay-container"></div>
+            <div id="overlay-switch-list"></div>
         </div>
     </main>
     
@@ -155,21 +154,19 @@
         }
 
         // --- DOM ELEMENTS AND STATE ---
-        const grid = document.getElementById('dashboard-grid');
-        const overlayWrapper = document.getElementById('overlay-wrapper');
-        const stackedView = document.getElementById('stacked-view');
-        const stackedContainer = document.getElementById('stacked-container');
-        const stackedLegend = document.getElementById('stacked-legend');
-        const explodedView = document.getElementById('exploded-view');
-        const filterContainer = document.getElementById('filter-container');
-        const filterInput = document.getElementById('filter-input');
-        const zoomSlider = document.getElementById('zoom-slider');
-        const graphTypeSelector = document.getElementById('graph-type-selector');
-        const periodSelector = document.getElementById('period-selector');
-        const overlayToggleBtn = document.getElementById('overlay-toggle-btn');
-        const closeBtn = document.getElementById('close-btn');
-        const hint = document.getElementById('hint');
-        const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
+        const grid = document.getElementById('dashboard-grid'),
+              overlayWrapper = document.getElementById('overlay-wrapper'),
+              overlayContainer = document.getElementById('overlay-container'),
+              overlaySwitchList = document.getElementById('overlay-switch-list'),
+              filterContainer = document.getElementById('filter-container'),
+              filterInput = document.getElementById('filter-input'),
+              zoomSlider = document.getElementById('zoom-slider'),
+              graphTypeSelector = document.getElementById('graph-type-selector'),
+              periodSelector = document.getElementById('period-selector'),
+              overlayToggleBtn = document.getElementById('overlay-toggle-btn'),
+              closeBtn = document.getElementById('close-btn'),
+              hint = document.getElementById('hint'),
+              switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
         
         let currentGraphType = 'traffic', currentTimePeriod = 'day', isOverlayMode = false;
 
@@ -180,16 +177,12 @@
             try {
                 const regex = new RegExp(searchTerm, 'i');
                 visibleSwitches = switchData.filter(sw => regex.test(sw.switch_name));
-            } catch (e) {
-                visibleSwitches = switchData;
-            }
+            } catch (e) { visibleSwitches = switchData; }
 
             if (isOverlayMode) {
                 grid.style.display = 'none';
                 overlayWrapper.style.display = 'block';
-                // Render both overlay views, but only one will be visible at a time
-                renderStackedOverlay(visibleSwitches);
-                renderExplodedOverlay(visibleSwitches);
+                renderOverlay(visibleSwitches);
             } else {
                 overlayWrapper.style.display = 'none';
                 grid.style.display = 'grid';
@@ -207,40 +200,28 @@
             });
         }
         
-        function renderStackedOverlay(switches) {
-            stackedContainer.innerHTML = '';
-            stackedLegend.innerHTML = '';
+        function renderOverlay(switches) {
+            overlayContainer.innerHTML = '';
+            overlaySwitchList.innerHTML = '';
             let firstImage = true;
             switches.forEach(sw => {
                 if (!sw.isActive) return;
                 const img = document.createElement('img');
                 img.src = getGraphUrl(sw);
                 img.dataset.hostId = sw.host_id;
+                img.style.opacity = '0.5'; // Default blended state
+                img.style.mixBlendMode = 'multiply';
                 if (firstImage) {
-                    img.onload = () => stackedContainer.style.height = `${img.naturalHeight}px`;
+                    img.onload = () => overlayContainer.style.height = `${img.naturalHeight}px`;
                     firstImage = false;
                 }
-                stackedContainer.appendChild(img);
+                overlayContainer.appendChild(img);
 
-                const legendItem = document.createElement('div');
-                legendItem.className = 'legend-item';
-                legendItem.textContent = sw.switch_name;
-                legendItem.dataset.hostId = sw.host_id;
-                stackedLegend.appendChild(legendItem);
-            });
-        }
-        
-        function renderExplodedOverlay(switches) {
-            explodedView.innerHTML = '';
-            switches.forEach(sw => {
-                if (!sw.isActive) return;
-                const item = document.createElement('div');
-                item.className = 'exploded-item';
-                item.innerHTML = `
-                    <img src="${getGraphUrl(sw)}" />
-                    <span>${sw.switch_name}</span>
-                `;
-                explodedView.appendChild(item);
+                const listItem = document.createElement('div');
+                listItem.className = 'switch-list-item';
+                listItem.textContent = sw.switch_name;
+                listItem.dataset.hostId = sw.host_id;
+                overlaySwitchList.appendChild(listItem);
             });
         }
         
@@ -254,15 +235,7 @@
             else return `https://munin.ffzg.hr/snmp/${sw.host_id}/snmp_${sw.host_id.replace(/-/g, '_')}_uptime.html`;
         }
 
-        function hideFilter() {
-            filterInput.value = '';
-            filterContainer.style.display = 'none';
-            renderView();
-        }
-
-        function setHighlight(hostId, state) {
-            document.querySelectorAll(`[data-host-id="${hostId}"]`).forEach(el => el.classList.toggle('is-highlighted', state));
-        }
+        function hideFilter() { filterInput.value = ''; filterContainer.style.display = 'none'; renderView(); }
 
         // --- EVENT LISTENERS ---
         filterInput.addEventListener('keyup', renderView);
@@ -275,26 +248,34 @@
             overlayToggleBtn.classList.toggle('active', isOverlayMode);
             renderView();
         });
-
-        // --- Overlay Interactions ---
-        stackedContainer.addEventListener('mouseenter', () => {
-            stackedView.style.display = 'none';
-            explodedView.style.display = 'flex';
+        
+        // --- MODIFIED: Overlay interaction ---
+        overlaySwitchList.addEventListener('mouseover', (event) => {
+            const target = event.target.closest('.switch-list-item');
+            if (target) {
+                const targetHostId = target.dataset.hostId;
+                overlayContainer.querySelectorAll('img').forEach(img => {
+                    const isTarget = img.dataset.hostId === targetHostId;
+                    img.style.opacity = isTarget ? '1' : '0';
+                    img.style.mixBlendMode = isTarget ? 'normal' : 'multiply';
+                });
+            }
         });
-        explodedView.addEventListener('mouseleave', () => {
-            explodedView.style.display = 'none';
-            stackedView.style.display = 'flex';
-        });
-        stackedLegend.addEventListener('mouseover', (event) => { if (event.target.dataset.hostId) setHighlight(event.target.dataset.hostId, true); });
-        stackedLegend.addEventListener('mouseout', (event) => { if (event.target.dataset.hostId) setHighlight(event.target.dataset.hostId, false); });
 
-        // Event listeners for selectors
+        overlaySwitchList.addEventListener('mouseleave', () => {
+            // When mouse leaves the list area, reset all to the blended view
+            overlayContainer.querySelectorAll('img').forEach(img => {
+                img.style.opacity = '0.5';
+                img.style.mixBlendMode = 'multiply';
+            });
+        });
+
+        // Selector Event Listeners
         [graphTypeSelector, periodSelector].forEach(selector => {
             selector.addEventListener('click', (event) => {
                 const target = event.target;
                 if (target.tagName === 'BUTTON') {
-                    const isPeriod = selector.id === 'period-selector';
-                    const key = isPeriod ? 'period' : 'graphType';
+                    const isPeriod = selector.id === 'period-selector', key = isPeriod ? 'period' : 'graphType';
                     if (target.dataset[key] !== (isPeriod ? currentTimePeriod : currentGraphType)) {
                         if (isPeriod) currentTimePeriod = target.dataset[key]; else currentGraphType = target.dataset[key];
                         selector.querySelector('.active').classList.remove('active');
