@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Complete SNMP Monitoring Dashboard</title>
+    <title>SNMP Monitoring</title>
     <style>
         /* General Body Styles */
         body {
@@ -13,242 +13,201 @@
             color: #333;
         }
 
-        /* --- MODIFIED: Floating Header --- */
-        header {
-            position: sticky;
+        /* --- HIDDEN FILTER OVERLAY --- */
+        #filter-overlay {
+            display: none; /* Hidden by default */
+            position: fixed;
             top: 0;
+            left: 0;
+            width: 100%;
             z-index: 10;
-            background-color: #f0f2f5;
-            padding: 20px 20px 15px 20px;
+            background: rgba(240, 242, 245, 0.9); /* Translucent background */
+            backdrop-filter: blur(5px); /* Frosted glass effect */
+            padding: 20px 0;
             border-bottom: 1px solid #ddd;
-        }
-
-        /* Page Header */
-        h1 {
             text-align: center;
-            margin-top: 0;
-            margin-bottom: 25px;
-            color: #1c1e21;
-        }
-
-        /* Filter Container and Help Text */
-        .filter-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            margin-bottom: 10px;
         }
 
         #filter-input {
             width: 50%;
             max-width: 600px;
             padding: 12px 20px;
-            font-size: 16px;
+            font-size: 18px;
             border-radius: 50px;
-            border: 1px solid #ccd0d5;
-            transition: all 0.2s ease-in-out;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+            border: 1px solid #ccc;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
         }
-
         #filter-input:focus {
             outline: none;
-            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+            border-color: #007bff;
         }
 
-        .filter-note {
-            text-align: center;
-            font-size: 0.9em;
-            color: #606770;
-            margin-top: 10px;
-        }
-
-        /* --- MODIFIED: 4-Column Grid Layout --- */
+        /* 4-Column Grid Layout */
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 20px;
-            padding: 20px; /* Add padding to the main content area */
+            gap: 15px; /* Reduced gap */
+            padding: 15px;
         }
 
-        /* Switch Card Styles */
+        /* --- MODIFIED: Switch Card with Overlay Name --- */
         .switch-card {
             background-color: #ffffff;
             border: 1px solid #ddd;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            position: relative; /* Required for absolute positioning of the name */
             transition: opacity 0.2s;
         }
 
-        /* Make the entire card a clickable link */
         .card-link {
             display: block;
             text-decoration: none;
             color: inherit;
-            padding: 15px 20px;
-            height: 100%;
-            box-sizing: border-box;
         }
         
         .switch-name {
-            color: #007bff;
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            background: rgba(0, 0, 0, 0.65);
+            color: white;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-size: 12px;
             font-weight: bold;
-            font-size: 1.2em;
-            margin-bottom: 15px;
-            display: block;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
-        }
-
-        .card-link:hover .switch-name {
-            text-decoration: underline;
+            z-index: 1;
         }
         
         .switch-card-image {
+            display: block; /* Removes any whitespace below the image */
             max-width: 100%;
             height: auto;
-            border-radius: 4px;
+            border-radius: 8px; /* Match card rounding */
         }
         
         /* Styles for commented-out (inactive) switches */
         .switch-card.inactive {
             opacity: 0.4;
             filter: grayscale(80%);
-        }
-
-        .switch-card.inactive .card-link {
-            pointer-events: none; /* Make link not clickable */
+            pointer-events: none;
         }
         
-        .switch-card.inactive .switch-name {
-            color: #6c757d;
+        /* Usability Hint */
+        .hint {
+            position: fixed;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+            opacity: 1;
+            transition: opacity 0.5s ease 2s;
+            pointer-events: none; /* So it can't be clicked */
+        }
+        .hint--hidden {
+            opacity: 0;
         }
 
-        /* Responsive adjustment for smaller screens */
-        @media (max-width: 1200px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(3, 1fr);
-            }
-        }
-        @media (max-width: 900px) {
-            .dashboard-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-        @media (max-width: 600px) {
-            .dashboard-grid {
-                grid-template-columns: 1fr;
-            }
-        }
 
+        /* Responsive adjustments */
+        @media (max-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 900px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 600px) { .dashboard-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>Complete SNMP Monitoring</h1>
-        <div class="filter-container">
-            <input type="text" id="filter-input" placeholder="Filter all devices by name or regex...">
-            <p class="filter-note">Supports plain text and regular expressions (e.g., "lib-[ab]", "^sw-a", "rack.$").</p>
-        </div>
-    </header>
+    <div id="filter-overlay">
+        <input type="text" id="filter-input">
+    </div>
 
     <main class="dashboard-grid" id="dashboard-grid">
         <!-- Switch cards are dynamically inserted here -->
     </main>
+    
+    <div class="hint" id="hint">Start typing to filter...</div>
+
 
     <script>
-        // --- DATA STRUCTURE WITH FULL CONTEXT ---
-        const activeSwitchNames = [
-            'sw-core', 'sw-dpc-1', 'sw-dpc-2', 'sw-r1sfp', 'sw-rack1', 'sw-ganeti', 'sw-rack2', 
-            'sw-lib-srv (rack3)', 'sw-a000-j', 'sw-a000-s', 'sw-a100-j', 'sw-a100-j-2', 'sw-a100-s', 
-            'sw-a121', 'sw-a125a', 'sw-a125-ss', 'sw-a200', 'sw-a200-j', 'sw-a200-j-2', 'sw-a200-s', 
-            'sw-a204', 'sw-a212', 'sw-a212-2', 'sw-a215', 'sw-aula', 'sw-aula-2', 'sw-b000', 
-            'sw-b000-2', 'sw-b100', 'sw-b100-2', 'sw-b200', 'sw-b200-2', 'sw-b300', 'sw-baraka', 
-            'sw-c000', 'sw-c000-2', 'sw-c100', 'sw-c200', 'sw-c300', 'sw-c300-2', 'sw-ctrl', 
-            'sw-dekanat', 'sw-dekanat-2', 'sw-e300', 'sw-e300-2', 'sw-fond-1', 'sw-fond', 'sw-lib', 
-            'sw-lib-a', 'sw-lib-b', 'sw-lib-c', 'sw-lib-cr1', 'sw-lib-d', 'sw-lib-e', 'sw-lib-f', 
-            'sw-lib-g', 'sw-lib-h', 'sw-lib-i', 'sw-lib-j', 'sw-lib-k', 'sw-lib-l', 'sw-lib-m', 
-            'sw-lib-n', 'sw-lib-o', 'sw-lib-p', 'sw-lib-q', 'sw-lib-r', 'sw-lib-s', 'sw-lib-zs', 
-            'sw-lib-wifi'
-        ];
-        
-        const commentedSwitchNames = [
-            'sw-cpf', 'sw-dpc', 'sw-b101', 'sw-b101-n'
-        ];
+        // --- DATA STRUCTURE ---
+        const activeSwitchNames = ['sw-core', 'sw-dpc-1', 'sw-dpc-2', 'sw-r1sfp', 'sw-rack1', 'sw-ganeti', 'sw-rack2', 'sw-lib-srv (rack3)', 'sw-a000-j', 'sw-a000-s', 'sw-a100-j', 'sw-a100-j-2', 'sw-a100-s', 'sw-a121', 'sw-a125a', 'sw-a125-ss', 'sw-a200', 'sw-a200-j', 'sw-a200-j-2', 'sw-a200-s', 'sw-a204', 'sw-a212', 'sw-a212-2', 'sw-a215', 'sw-aula', 'sw-aula-2', 'sw-b000', 'sw-b000-2', 'sw-b100', 'sw-b100-2', 'sw-b200', 'sw-b200-2', 'sw-b300', 'sw-baraka', 'sw-c000', 'sw-c000-2', 'sw-c100', 'sw-c200', 'sw-c300', 'sw-c300-2', 'sw-ctrl', 'sw-dekanat', 'sw-dekanat-2', 'sw-e300', 'sw-e300-2', 'sw-fond-1', 'sw-fond', 'sw-lib', 'sw-lib-a', 'sw-lib-b', 'sw-lib-c', 'sw-lib-cr1', 'sw-lib-d', 'sw-lib-e', 'sw-lib-f', 'sw-lib-g', 'sw-lib-h', 'sw-lib-i', 'sw-lib-j', 'sw-lib-k', 'sw-lib-l', 'sw-lib-m', 'sw-lib-n', 'sw-lib-o', 'sw-lib-p', 'sw-lib-q', 'sw-lib-r', 'sw-lib-s', 'sw-lib-zs', 'sw-lib-wifi'];
+        const commentedSwitchNames = ['sw-cpf', 'sw-dpc', 'sw-b101', 'sw-b101-n'];
 
         // --- DYNAMIC DATA GENERATION ---
         function generateSwitchData(activeNames, commentedNames) {
             const GRAPH_URL_TEMPLATE = "https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
             const DETAILS_URL_TEMPLATE = "https://munin.ffzg.hr/snmp/{ID}/index.html";
-
-            const createObject = (displayName, isActive) => {
-                const urlId = displayName.split(' ')[0];
-                return {
-                    switch_name: displayName,
-                    graph_url: GRAPH_URL_TEMPLATE.replace('{ID}', urlId),
-                    details_url: DETAILS_URL_TEMPLATE.replace('{ID}', urlId),
-                    isActive: isActive
-                };
-            };
-
-            const activeSwitches = activeNames.map(name => createObject(name, true));
-            const commentedSwitches = commentedNames.map(name => createObject(name, false));
-
-            return activeSwitches.concat(commentedSwitches);
+            const createObject = (displayName, isActive) => ({ switch_name: displayName, graph_url: GRAPH_URL_TEMPLATE.replace('{ID}', displayName.split(' ')[0]), details_url: DETAILS_URL_TEMPLATE.replace('{ID}', displayName.split(' ')[0]), isActive });
+            return activeNames.map(name => createObject(name, true)).concat(commentedNames.map(name => createObject(name, false)));
         }
 
         // --- RENDERING AND FILTERING LOGIC ---
         const grid = document.getElementById('dashboard-grid');
+        const filterOverlay = document.getElementById('filter-overlay');
         const filterInput = document.getElementById('filter-input');
-        
+        const hint = document.getElementById('hint');
         const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
+        let filterIsActive = false;
 
         function renderSwitches(switches) {
             grid.innerHTML = '';
             switches.forEach(sw => {
                 const card = document.createElement('div');
                 card.className = `switch-card ${sw.isActive ? '' : 'inactive'}`;
-                
-                card.innerHTML = `
-                    <a href="${sw.details_url}" target="sw" class="card-link">
-                        <div class="switch-name">${sw.switch_name}</div>
-                        <img src="${sw.graph_url}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image">
-                    </a>
-                `;
+                card.innerHTML = `<a href="${sw.details_url}" target="sw" class="card-link"><div class="switch-name">${sw.switch_name}</div><img src="${sw.graph_url}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image"></a>`;
                 grid.appendChild(card);
             });
         }
 
-        // --- EVENT LISTENER WITH REGEX SUPPORT ---
-        filterInput.addEventListener('keyup', () => {
+        function runFilter() {
             const searchTerm = filterInput.value;
+            if (!searchTerm) { renderSwitches(switchData); return; }
+            try {
+                const regex = new RegExp(searchTerm, 'i');
+                renderSwitches(switchData.filter(sw => regex.test(sw.switch_name)));
+            } catch (e) {
+                // If regex is invalid, do nothing until it's valid again
+            }
+        }
+        
+        filterInput.addEventListener('keyup', runFilter);
 
-            if (!searchTerm) {
-                renderSwitches(switchData);
-                filterInput.style.borderColor = '#ccd0d5';
+        // --- GLOBAL KEYBOARD LISTENER ---
+        window.addEventListener('keydown', (event) => {
+            // Use Escape key to hide the filter and reset
+            if (event.key === 'Escape') {
+                filterInput.value = '';
+                filterOverlay.style.display = 'none';
+                filterIsActive = false;
+                runFilter();
                 return;
             }
 
-            let filteredSwitches;
-            
-            try {
-                const regex = new RegExp(searchTerm, 'i');
-                filteredSwitches = switchData.filter(sw => regex.test(sw.switch_name));
-                filterInput.style.borderColor = '#28a745';
-            } catch (e) {
-                const lowerCaseSearchTerm = searchTerm.toLowerCase();
-                filteredSwitches = switchData.filter(sw => 
-                    sw.switch_name.toLowerCase().includes(lowerCaseSearchTerm)
-                );
-                filterInput.style.borderColor = '#dc3545';
+            // If the user is already typing in the input, do nothing.
+            // Also ignore keystrokes with modifiers or special keys.
+            if (filterIsActive || event.metaKey || event.ctrlKey || event.altKey || event.key.length > 1) {
+                return;
             }
+
+            // On the first valid keypress, show and prime the filter.
+            filterIsActive = true;
+            filterOverlay.style.display = 'block';
+            filterInput.focus();
+            filterInput.value = event.key; // Add the first character
+            runFilter();
             
-            renderSwitches(filteredSwitches);
+            event.preventDefault(); // Stop the key from being typed anywhere else
         });
 
-        // Initial render of all switches.
+        // Initial Render
         renderSwitches(switchData);
+        
+        // Hide the usability hint after a few seconds
+        setTimeout(() => hint.classList.add('hint--hidden'), 1000);
 
     </script>
 </body>
