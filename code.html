@@ -17,7 +17,7 @@
         #filter-container {
             display: none; /* Hidden by default */
             position: relative; /* Anchor for the close button */
-            padding: 20px 50px 20px 20px; /* Extra padding on the right for the close button */
+            padding: 20px 50px 20px 20px; /* Extra padding on the right */
             background-color: #e9ecef;
             border-bottom: 1px solid #dee2e6;
             flex-wrap: wrap;
@@ -27,8 +27,8 @@
         }
 
         #filter-input {
-            width: 50%;
-            max-width: 500px;
+            width: 40%;
+            max-width: 400px;
             padding: 12px 20px;
             font-size: 18px;
             border-radius: 50px;
@@ -47,10 +47,30 @@
             color: #555;
         }
         #zoom-slider {
-            width: 150px;
+            width: 120px;
         }
 
-        /* --- MODIFIED: Close Button --- */
+        /* --- MODIFIED: Period Selector --- */
+        .period-selector button {
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 8px 15px;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        .period-selector button:first-child { border-radius: 20px 0 0 20px; }
+        .period-selector button:last-child { border-radius: 0 20px 20px 0; }
+        .period-selector button:not(:last-child) { border-right: none; }
+        .period-selector button:hover { background-color: #f1f1f1; }
+        .period-selector button.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+            font-weight: bold;
+        }
+
+
+        /* Close Button */
         #close-btn {
             position: absolute;
             top: 50%;
@@ -67,7 +87,6 @@
         #close-btn:hover {
             color: #343a40;
         }
-
 
         /* Dynamic Grid Layout */
         .dashboard-grid {
@@ -89,38 +108,13 @@
             transition: opacity 0.2s;
         }
 
-        .card-link {
-            display: block;
-            text-decoration: none;
-            color: inherit;
-        }
-        
+        .card-link { display: block; text-decoration: none; color: inherit; }
         .switch-name {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(0, 0, 0, 0.65);
-            color: white;
-            padding: 3px 10px;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 1;
+            position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, 0.65); color: white;
+            padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 1;
         }
-        
-        .switch-card-image {
-            display: block;
-            max-width: 100%;
-            height: auto;
-            border-radius: 8px;
-        }
-        
-        /* Styles for commented-out switches */
-        .switch-card.inactive {
-            opacity: 0.4;
-            filter: grayscale(80%);
-            pointer-events: none;
-        }
+        .switch-card-image { display: block; max-width: 100%; height: auto; border-radius: 8px; }
+        .switch-card.inactive { opacity: 0.4; filter: grayscale(80%); pointer-events: none; }
         
         /* Usability Hint */
         .hint {
@@ -128,15 +122,19 @@
             color: white; padding: 5px 15px; border-radius: 20px; font-size: 12px; opacity: 1;
             transition: opacity 0.5s ease 2s; pointer-events: none;
         }
-        .hint--hidden {
-            opacity: 0;
-        }
+        .hint--hidden { opacity: 0; }
     </style>
 </head>
 <body>
 
     <div id="filter-container">
         <input type="text" id="filter-input">
+        <div class="period-selector">
+            <button class="active" data-period="day">Day</button>
+            <button data-period="week">Week</button>
+            <button data-period="month">Month</button>
+            <button data-period="year">Year</button>
+        </div>
         <div class="zoom-control">
             <label for="zoom-slider">Zoom:</label>
             <input type="range" id="zoom-slider" min="50" max="200" value="100">
@@ -158,20 +156,28 @@
 
         // --- DYNAMIC DATA GENERATION ---
         function generateSwitchData(activeNames, commentedNames) {
-            const GRAPH_URL_TEMPLATE = "https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
+            // NOTE: URL now has a {PERIOD} placeholder.
+            const GRAPH_URL_TEMPLATE = "https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-{PERIOD}.png";
             const DETAILS_URL_TEMPLATE = "https://munin.ffzg.hr/snmp/{ID}/index.html";
-            const createObject = (displayName, isActive) => ({ switch_name: displayName, graph_url: GRAPH_URL_TEMPLATE.replace('{ID}', displayName.split(' ')[0]), details_url: DETAILS_URL_TEMPLATE.replace('{ID}', displayName.split(' ')[0]), isActive });
+            const createObject = (displayName, isActive) => ({
+                switch_name: displayName,
+                graph_url_template: GRAPH_URL_TEMPLATE.replace('{ID}', displayName.split(' ')[0]),
+                details_url: DETAILS_URL_TEMPLATE.replace('{ID}', displayName.split(' ')[0]),
+                isActive: isActive
+            });
             return activeNames.map(name => createObject(name, true)).concat(commentedNames.map(name => createObject(name, false)));
         }
 
-        // --- DOM ELEMENTS ---
+        // --- DOM ELEMENTS AND STATE ---
         const grid = document.getElementById('dashboard-grid');
         const filterContainer = document.getElementById('filter-container');
         const filterInput = document.getElementById('filter-input');
         const zoomSlider = document.getElementById('zoom-slider');
+        const periodSelector = document.querySelector('.period-selector');
         const closeBtn = document.getElementById('close-btn');
         const hint = document.getElementById('hint');
         const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
+        let currentTimePeriod = 'day'; // State for the current time period
 
         // --- FUNCTIONS ---
         function renderSwitches(switches) {
@@ -179,7 +185,9 @@
             switches.forEach(sw => {
                 const card = document.createElement('div');
                 card.className = `switch-card ${sw.isActive ? '' : 'inactive'}`;
-                card.innerHTML = `<a href="${sw.details_url}" target="sw" class="card-link"><div class="switch-name">${sw.switch_name}</div><img src="${sw.graph_url}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image"></a>`;
+                // Dynamically build the graph URL using the current time period
+                const graphUrl = sw.graph_url_template.replace('{PERIOD}', currentTimePeriod);
+                card.innerHTML = `<a href="${sw.details_url}" target="sw" class="card-link"><div class="switch-name">${sw.switch_name}</div><img src="${graphUrl}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image"></a>`;
                 grid.appendChild(card);
             });
         }
@@ -197,36 +205,40 @@
         function hideFilter() {
             filterInput.value = '';
             filterContainer.style.display = 'none';
-            runFilter(); // Reset view to all switches
+            runFilter();
         }
 
         // --- EVENT LISTENERS ---
         filterInput.addEventListener('keyup', runFilter);
-        
-        zoomSlider.addEventListener('input', () => {
-            grid.style.setProperty('--card-zoom-factor', zoomSlider.value / 100);
-        });
-
+        zoomSlider.addEventListener('input', () => grid.style.setProperty('--card-zoom-factor', zoomSlider.value / 100));
         closeBtn.addEventListener('click', hideFilter);
 
-        window.addEventListener('keydown', (event) => {
-            // If the user presses Escape, hide the filter.
-            if (event.key === 'Escape') {
-                hideFilter();
-                return;
+        // MODIFIED: Handle clicks on the period selector
+        periodSelector.addEventListener('click', (event) => {
+            const target = event.target;
+            // Only act if a button was clicked
+            if (target.tagName === 'BUTTON') {
+                const newPeriod = target.dataset.period;
+                if (newPeriod !== currentTimePeriod) {
+                    currentTimePeriod = newPeriod; // Update the state
+                    // Update visual styles
+                    periodSelector.querySelector('.active').classList.remove('active');
+                    target.classList.add('active');
+                    runFilter(); // Re-render the grid with new graph URLs
+                }
             }
-            
-            // Do nothing if the user is already typing in an input.
-            if (document.activeElement === filterInput || document.activeElement === zoomSlider) return;
+        });
 
-            // Only activate on single character keys (ignore Ctrl, Shift, etc.).
+        window.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') { hideFilter(); return; }
+            const activeEl = document.activeElement;
+            if (activeEl === filterInput || activeEl === zoomSlider || activeEl.tagName === 'BUTTON') return;
             if (event.key.length === 1) {
-                filterContainer.style.display = 'flex'; // Show the header
+                filterContainer.style.display = 'flex';
                 filterInput.focus();
                 filterInput.value = event.key;
                 runFilter();
-                
-                event.preventDefault(); // Prevent the key from being typed anywhere else.
+                event.preventDefault();
             }
         });
 
