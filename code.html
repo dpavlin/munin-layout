@@ -10,13 +10,23 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f0f2f5;
             margin: 0;
-            padding: 20px;
             color: #333;
+        }
+
+        /* --- MODIFIED: Floating Header --- */
+        header {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background-color: #f0f2f5;
+            padding: 20px 20px 15px 20px;
+            border-bottom: 1px solid #ddd;
         }
 
         /* Page Header */
         h1 {
             text-align: center;
+            margin-top: 0;
             margin-bottom: 25px;
             color: #1c1e21;
         }
@@ -26,7 +36,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
         }
 
         #filter-input {
@@ -52,11 +62,12 @@
             margin-top: 10px;
         }
 
-        /* Dashboard Grid Layout */
+        /* --- MODIFIED: 4-Column Grid Layout --- */
         .dashboard-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            grid-template-columns: repeat(4, 1fr);
             gap: 20px;
+            padding: 20px; /* Add padding to the main content area */
         }
 
         /* Switch Card Styles */
@@ -65,7 +76,6 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            /* Padding removed from card and added to the link wrapper */
             transition: opacity 0.2s;
         }
 
@@ -85,6 +95,9 @@
             font-size: 1.2em;
             margin-bottom: 15px;
             display: block;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
 
         .card-link:hover .switch-name {
@@ -111,20 +124,38 @@
             color: #6c757d;
         }
 
+        /* Responsive adjustment for smaller screens */
+        @media (max-width: 1200px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(3, 1fr);
+            }
+        }
+        @media (max-width: 900px) {
+            .dashboard-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 600px) {
+            .dashboard-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
     </style>
 </head>
 <body>
 
-    <h1>Complete SNMP Monitoring</h1>
+    <header>
+        <h1>Complete SNMP Monitoring</h1>
+        <div class="filter-container">
+            <input type="text" id="filter-input" placeholder="Filter all devices by name or regex...">
+            <p class="filter-note">Supports plain text and regular expressions (e.g., "lib-[ab]", "^sw-a", "rack.$").</p>
+        </div>
+    </header>
 
-    <div class="filter-container">
-        <input type="text" id="filter-input" placeholder="Filter all devices by name or regex...">
-        <p class="filter-note">Supports plain text and regular expressions (e.g., "lib-[ab]", "^sw-a", "rack.$").</p>
-    </div>
-
-    <div class="dashboard-grid" id="dashboard-grid">
+    <main class="dashboard-grid" id="dashboard-grid">
         <!-- Switch cards are dynamically inserted here -->
-    </div>
+    </main>
 
     <script>
         // --- DATA STRUCTURE WITH FULL CONTEXT ---
@@ -179,7 +210,6 @@
                 const card = document.createElement('div');
                 card.className = `switch-card ${sw.isActive ? '' : 'inactive'}`;
                 
-                // --- MODIFIED: The entire card is now a single link ---
                 card.innerHTML = `
                     <a href="${sw.details_url}" target="sw" class="card-link">
                         <div class="switch-name">${sw.switch_name}</div>
