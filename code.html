@@ -13,19 +13,13 @@
             color: #333;
         }
 
-        /* --- HIDDEN FILTER OVERLAY --- */
-        #filter-overlay {
+        /* --- MODIFIED: Inline Filter Bar --- */
+        #filter-container {
             display: none; /* Hidden by default */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            z-index: 10;
-            background: rgba(240, 242, 245, 0.9); /* Translucent background */
-            backdrop-filter: blur(5px); /* Frosted glass effect */
             padding: 20px 0;
-            border-bottom: 1px solid #ddd;
             text-align: center;
+            background-color: #e9ecef; /* A slightly different background to distinguish it */
+            border-bottom: 1px solid #dee2e6;
         }
 
         #filter-input {
@@ -35,7 +29,7 @@
             font-size: 18px;
             border-radius: 50px;
             border: 1px solid #ccc;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
         }
         #filter-input:focus {
             outline: none;
@@ -46,17 +40,17 @@
         .dashboard-grid {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 15px; /* Reduced gap */
+            gap: 15px;
             padding: 15px;
         }
 
-        /* --- MODIFIED: Switch Card with Overlay Name --- */
+        /* Switch Card with Overlay Name */
         .switch-card {
             background-color: #ffffff;
             border: 1px solid #ddd;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            position: relative; /* Required for absolute positioning of the name */
+            position: relative;
             transition: opacity 0.2s;
         }
 
@@ -80,13 +74,13 @@
         }
         
         .switch-card-image {
-            display: block; /* Removes any whitespace below the image */
+            display: block;
             max-width: 100%;
             height: auto;
-            border-radius: 8px; /* Match card rounding */
+            border-radius: 8px;
         }
         
-        /* Styles for commented-out (inactive) switches */
+        /* Styles for commented-out switches */
         .switch-card.inactive {
             opacity: 0.4;
             filter: grayscale(80%);
@@ -106,12 +100,11 @@
             font-size: 12px;
             opacity: 1;
             transition: opacity 0.5s ease 2s;
-            pointer-events: none; /* So it can't be clicked */
+            pointer-events: none;
         }
         .hint--hidden {
             opacity: 0;
         }
-
 
         /* Responsive adjustments */
         @media (max-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(3, 1fr); } }
@@ -121,7 +114,7 @@
 </head>
 <body>
 
-    <div id="filter-overlay">
+    <div id="filter-container">
         <input type="text" id="filter-input">
     </div>
 
@@ -145,14 +138,15 @@
             return activeNames.map(name => createObject(name, true)).concat(commentedNames.map(name => createObject(name, false)));
         }
 
-        // --- RENDERING AND FILTERING LOGIC ---
+        // --- DOM ELEMENTS AND STATE ---
         const grid = document.getElementById('dashboard-grid');
-        const filterOverlay = document.getElementById('filter-overlay');
+        const filterContainer = document.getElementById('filter-container');
         const filterInput = document.getElementById('filter-input');
         const hint = document.getElementById('hint');
         const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
-        let filterIsActive = false;
+        let hideTimeoutId = null;
 
+        // --- FUNCTIONS ---
         function renderSwitches(switches) {
             grid.innerHTML = '';
             switches.forEach(sw => {
@@ -165,48 +159,51 @@
 
         function runFilter() {
             const searchTerm = filterInput.value;
-            if (!searchTerm) { renderSwitches(switchData); return; }
             try {
                 const regex = new RegExp(searchTerm, 'i');
                 renderSwitches(switchData.filter(sw => regex.test(sw.switch_name)));
             } catch (e) {
-                // If regex is invalid, do nothing until it's valid again
+                renderSwitches(switchData); // On invalid regex, show all
             }
         }
         
-        filterInput.addEventListener('keyup', runFilter);
+        function hideFilter() {
+            filterInput.value = '';
+            filterContainer.style.display = 'none'; // Hide the container
+            runFilter(); // Reset view to all switches
+        }
 
-        // --- GLOBAL KEYBOARD LISTENER ---
+        // --- EVENT LISTENERS ---
+        filterInput.addEventListener('keyup', runFilter);
+        filterInput.addEventListener('blur', () => { hideTimeoutId = setTimeout(hideFilter, 200); });
+        filterInput.addEventListener('focus', () => { clearTimeout(hideTimeoutId); });
+
         window.addEventListener('keydown', (event) => {
+            // Check if the user is already typing in an input
+            if (document.activeElement === filterInput) return;
+
             // Use Escape key to hide the filter and reset
             if (event.key === 'Escape') {
-                filterInput.value = '';
-                filterOverlay.style.display = 'none';
-                filterIsActive = false;
-                runFilter();
+                hideFilter();
                 return;
             }
 
-            // If the user is already typing in the input, do nothing.
-            // Also ignore keystrokes with modifiers or special keys.
-            if (filterIsActive || event.metaKey || event.ctrlKey || event.altKey || event.key.length > 1) {
+            // Ignore keystrokes with modifiers or special keys (like "Shift", "Control")
+            if (event.metaKey || event.ctrlKey || event.altKey || event.key.length > 1) {
                 return;
             }
-
+            
             // On the first valid keypress, show and prime the filter.
-            filterIsActive = true;
-            filterOverlay.style.display = 'block';
+            filterContainer.style.display = 'block'; // Make the container visible
             filterInput.focus();
-            filterInput.value = event.key; // Add the first character
+            filterInput.value = event.key;
             runFilter();
             
             event.preventDefault(); // Stop the key from being typed anywhere else
         });
 
-        // Initial Render
+        // --- INITIALIZATION ---
         renderSwitches(switchData);
-        
-        // Hide the usability hint after a few seconds
         setTimeout(() => hint.classList.add('hint--hidden'), 1000);
 
     </script>
