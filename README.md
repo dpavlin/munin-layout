@@ -1,28 +1,49 @@
 # Interactive Munin Layout
 
-This project provides a modern, interactive single-page layout for viewing Munin-generated graphs. It replaces the default static HTML table with a responsive, filterable grid, making it significantly easier to navigate and analyze a large number of system monitoring graphs.
+This project provides a modern, interactive single-page layout for viewing Munin-generated graphs. It transforms the default static HTML table into a responsive, filterable, and multi-metric analysis tool, making it significantly easier to navigate and correlate data from a large number of hosts.
 
-It's designed to be a drop-in replacement or a standalone viewer that leverages the predictable URL structure of a Munin installation.
+It's a single, self-contained `index.html` file that can be dropped into any web server or opened locally.
 
 
+*(Link to a GIF demonstrating the type-to-filter, overlay mode, and metric switching would go here)*
 
 ## The Problem
 
-The default Munin web interface, while functional, is a static HTML page that becomes difficult to use when monitoring dozens or hundreds of devices. Finding a specific graph requires manually scrolling and scanning a large, fixed table. This project aims to solve that by providing a fast, modern, client-side interface for the same data.
+The default Munin web interface, while functional, is a static HTML page that becomes difficult to use when monitoring dozens or hundreds of devices. Finding a specific graph, comparing metrics, or changing time periods requires loading entirely new pages. This project solves that by providing a fast, modern, client-side interface for the same underlying graph data.
 
 ## Features
 
-*   **Graphs-First Immersive View:** Loads with a clean, uncluttered grid of graphs. The controls are hidden until needed.
-*   **Instant "Type-to-Filter" Search:** Simply start typing any character to bring up the filter bar. The grid updates instantly as you type, supporting both plain text and regular expressions.
-*   **Time Period Selector:** Easily switch between `Day`, `Week`, `Month`, and `Year` views. The graph images update on the fly.
-*   **Dynamic Zoom & Reflow:** An intuitive slider allows you to zoom in or out, and the grid automatically adjusts the number of columns to best fit your screen and zoom level.
-*   **Commented Host Support:** Includes a data structure to recognize hosts that are commented-out in the original Munin config, displaying them as inactive.
-*   **Zero Dependencies:** It's a single, self-contained `index.html` file written in vanilla HTML, CSS, and JavaScript. No build process or server is required.
-*   **Predictable & User-Controlled:** The filter bar appears when you need it and is hidden with the `Esc` key or a close button. No unpredictable auto-hiding behavior.
+*   **Immersive, Graphs-First View:** The page loads with a clean, uncluttered grid of graphs. All controls are hidden until you need them.
+*   **Instant "Type-to-Filter":** Simply start typing any character to bring up the filter bar. The grid updates instantly as you type.
+    *   Supports both **plain text** and **regular expressions**.
+    *   Dismiss the filter with the `Esc` key or the close button (`×`).
+*   **Multi-Metric and Multi-Period Views:**
+    *   **Graph Type Selector:** Instantly switch between different metrics like **Traffic** (`if_bytes`) and **Uptime**.
+    *   **Time Period Selector:** Easily toggle all graphs between `Day`, `Week`, `Month`, and `Year` views.
+*   **Advanced Overlay Comparison Mode:**
+    *   **Blended View:** Toggling "Overlay" mode stacks all currently filtered graphs, using CSS `mix-blend-mode` to make their white backgrounds transparent. This creates a powerful composite view for spotting outliers and correlations.
+    *   **Isolate on Hover:** Below the blended graph, a list of all active switches appears. Hovering your mouse over any switch name in the list instantly isolates its graph, making it fully opaque for clear inspection.
+*   **Dynamic Zoom and Reflow:**
+    *   An intuitive slider in the header lets you zoom the graph cards in and out.
+    *   The grid automatically reflows, calculating the optimal number of columns to fit any screen size or zoom level.
+*   **Zero Dependencies & Easy Setup:**
+    *   The entire application is a **single, self-contained `index.html` file**.
+    *   Written in vanilla HTML, CSS, and JavaScript. No build process, dependencies, or server-side code is required.
+    *   Recognizes and visually disables hosts that are commented-out in your configuration.
 
 ## How It Works
 
-The core of the project is a JavaScript array containing the names of the monitored hosts. It dynamically generates the graph and detail URLs based on Munin's standard URL structure:
-`.../{HOST_NAME}/if_bytes-{PERIOD}.png`
+The core of the project is a JavaScript array containing the names of the monitored hosts. It leverages Munin's predictable URL structure to dynamically generate the correct image and detail page URLs on the fly.
 
-This makes it easy to adapt to any Munin setup by simply editing the list of hostnames in the script.
+*   **Host Names:** The `activeSwitchNames` and `commentedSwitchNames` arrays at the top of the `<script>` tag are the only things that need to be configured.
+*   **URL Generation:** The script constructs the necessary URLs by combining a base path with the host name, the selected metric (`if_bytes` or `uptime`), and the selected time period (`day`, `week`, etc.).
+*   **Transparent Overlay:** The "transparent" graph effect is achieved with a single, highly performant CSS property: `mix-blend-mode: multiply;`. This browser feature blends the layers, treating white as transparent, without any need for complex image processing.
+
+## Usage
+
+1.  Download the `index.html` file.
+2.  Open the file in a text editor.
+3.  Locate the `activeSwitchNames` and `commentedSwitchNames` JavaScript arrays near the top of the `<script>` block.
+4.  Replace the contents of these arrays with your own list of hostnames from your Munin setup.
+5.  Save the file and open it in a web browser. It can be served from a web server or opened directly from your local filesystem.
+
