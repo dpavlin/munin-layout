@@ -11,13 +11,14 @@
             background-color: #f0f2f5;
             margin: 0;
             color: #333;
+            overflow-x: hidden; /* Prevent horizontal scrollbars from main page */
         }
 
         /* --- Inline Filter Bar --- */
         #filter-container {
             display: none; /* Hidden by default */
-            position: relative; /* Anchor for the close button */
-            padding: 20px 50px 20px 20px; /* Extra padding on the right */
+            position: relative;
+            padding: 20px 50px 20px 20px;
             background-color: #e9ecef;
             border-bottom: 1px solid #dee2e6;
             flex-wrap: wrap;
@@ -26,66 +27,27 @@
             gap: 15px;
         }
 
-        #filter-input {
-            width: 30%;
-            max-width: 300px;
-            padding: 12px 20px;
-            font-size: 18px;
-            border-radius: 50px;
-            border: 1px solid #ccc;
-        }
-        #filter-input:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-        
-        /* Zoom Slider Control */
-        .zoom-control {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            color: #555;
-        }
-        #zoom-slider {
-            width: 120px;
-        }
+        #filter-input { width: 30%; max-width: 300px; padding: 12px 20px; font-size: 18px; border-radius: 50px; border: 1px solid #ccc; }
+        #filter-input:focus { outline: none; border-color: #007bff; }
+        .zoom-control { display: flex; align-items: center; gap: 10px; color: #555; }
+        #zoom-slider { width: 120px; }
 
-        /* --- Button Group Styles (for Period and Graph Type) --- */
+        /* Button Group Styles */
         .selector-group button {
-            background-color: #fff;
-            border: 1px solid #ccc;
-            padding: 8px 15px;
-            cursor: pointer;
-            transition: background-color 0.2s;
+            background-color: #fff; border: 1px solid #ccc; padding: 8px 15px; cursor: pointer; transition: background-color 0.2s;
         }
         .selector-group button:first-child { border-radius: 20px 0 0 20px; }
         .selector-group button:last-child { border-radius: 0 20px 20px 0; }
         .selector-group button:not(:last-child) { border-right: none; }
         .selector-group button:hover { background-color: #f1f1f1; }
-        .selector-group button.active {
-            background-color: #007bff;
-            color: white;
-            border-color: #007bff;
-            font-weight: bold;
-        }
+        .selector-group button.active { background-color: #007bff; color: white; border-color: #007bff; font-weight: bold; }
 
         /* Close Button */
         #close-btn {
-            position: absolute;
-            top: 50%;
-            right: 15px;
-            transform: translateY(-50%);
-            background: transparent;
-            border: none;
-            font-size: 28px;
-            color: #6c757d;
-            cursor: pointer;
-            padding: 0 10px;
-            line-height: 1;
+            position: absolute; top: 50%; right: 15px; transform: translateY(-50%); background: transparent; border: none;
+            font-size: 28px; color: #6c757d; cursor: pointer; padding: 0 10px; line-height: 1;
         }
-        #close-btn:hover {
-            color: #343a40;
-        }
+        #close-btn:hover { color: #343a40; }
 
         /* Dynamic Grid Layout */
         .dashboard-grid {
@@ -99,14 +61,9 @@
 
         /* Switch Card with Overlay Name */
         .switch-card {
-            background-color: #ffffff;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            position: relative;
-            transition: opacity 0.2s;
+            background-color: #ffffff; border: 1px solid #ddd; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            position: relative; transition: opacity 0.2s;
         }
-
         .card-link { display: block; text-decoration: none; color: inherit; }
         .switch-name {
             position: absolute; top: 8px; right: 8px; background: rgba(0, 0, 0, 0.65); color: white;
@@ -115,6 +72,44 @@
         .switch-card-image { display: block; max-width: 100%; height: auto; border-radius: 8px; }
         .switch-card.inactive { opacity: 0.4; filter: grayscale(80%); pointer-events: none; }
         
+        /* --- MODIFIED: Overlay System --- */
+        #overlay-wrapper {
+            display: none; /* Hidden by default */
+            width: 100%;
+            margin: 20px auto;
+        }
+        /* Stacked View (Default Overlay) */
+        #stacked-view {
+            display: flex;
+            width: 95%;
+            max-width: 1400px;
+            margin: 0 auto;
+            gap: 20px;
+        }
+        #stacked-container { flex: 3; position: relative; background-color: #fff; border: 1px solid #ccc; }
+        #stacked-container img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0.15; transition: opacity 0.2s ease-in-out; }
+        #stacked-container img.is-highlighted { opacity: 1; z-index: 10; }
+        #stacked-legend { flex: 1; max-height: 75vh; overflow-y: auto; background-color: #fff; border: 1px solid #ccc; padding: 5px; }
+        .legend-item { padding: 8px 12px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; font-size: 14px; }
+        .legend-item.is-highlighted { background-color: #e9ecef; }
+        
+        /* Exploded View (Horizontal Strip on hover) */
+        #exploded-view {
+            display: none; /* Hidden until triggered */
+            flex-direction: row;
+            align-items: center;
+            overflow-x: auto;
+            padding: 20px;
+            gap: 15px;
+            background: #d8dcdf;
+        }
+        .exploded-item { text-align: center; flex-shrink: 0; opacity: 0.4; transition: opacity 0.2s; }
+        .exploded-item img { max-height: 300px; border: 1px solid #aaa; }
+        .exploded-item span { display: block; margin-top: 5px; font-weight: bold; }
+        /* Highlight on hover for exploded view */
+        #exploded-view:hover .exploded-item { opacity: 0.2; }
+        #exploded-view .exploded-item:hover { opacity: 1; }
+
         /* Usability Hint */
         .hint {
             position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7);
@@ -128,29 +123,25 @@
 
     <div id="filter-container">
         <input type="text" id="filter-input">
-        <div class="selector-group" id="graph-type-selector">
-            <button class="active" data-graph-type="traffic">Traffic</button>
-            <button data-graph-type="uptime">Uptime</button>
-        </div>
-        <div class="selector-group" id="period-selector">
-            <button class="active" data-period="day">Day</button>
-            <button data-period="week">Week</button>
-            <button data-period="month">Month</button>
-            <button data-period="year">Year</button>
-        </div>
-        <div class="zoom-control">
-            <label for="zoom-slider">Zoom:</label>
-            <input type="range" id="zoom-slider" min="50" max="200" value="100">
-        </div>
+        <div class="selector-group" id="graph-type-selector"> <button class="active" data-graph-type="traffic">Traffic</button> <button data-graph-type="uptime">Uptime</button> </div>
+        <div class="selector-group" id="period-selector"> <button class="active" data-period="day">Day</button> <button data-period="week">Week</button> <button data-period="month">Month</button> <button data-period="year">Year</button> </div>
+        <div class="zoom-control"> <label for="zoom-slider">Zoom:</label> <input type="range" id="zoom-slider" min="50" max="200" value="100"> </div>
+        <div class="selector-group"> <button id="overlay-toggle-btn">Overlay</button> </div>
         <button id="close-btn" title="Close (Esc)">&times;</button>
     </div>
 
-    <main class="dashboard-grid" id="dashboard-grid">
-        <!-- Switch cards are dynamically inserted here -->
+    <main>
+        <div class="dashboard-grid" id="dashboard-grid"></div>
+        <div id="overlay-wrapper">
+            <div id="stacked-view">
+                <div id="stacked-container"></div>
+                <div id="stacked-legend"></div>
+            </div>
+            <div id="exploded-view"></div>
+        </div>
     </main>
     
     <div class="hint" id="hint">Start typing to filter...</div>
-
 
     <script>
         // --- DATA STRUCTURE ---
@@ -159,98 +150,159 @@
 
         // --- DYNAMIC DATA GENERATION ---
         function generateSwitchData(activeNames, commentedNames) {
-            // Simplified data object: we'll build URLs on the fly during render
-            const createObject = (displayName, isActive) => ({
-                switch_name: displayName,
-                host_id: displayName.split(' ')[0], // e.g., "sw-lib-srv"
-                isActive: isActive
-            });
+            const createObject = (displayName, isActive) => ({ switch_name: displayName, host_id: displayName.split(' ')[0], isActive });
             return activeNames.map(name => createObject(name, true)).concat(commentedNames.map(name => createObject(name, false)));
         }
 
         // --- DOM ELEMENTS AND STATE ---
         const grid = document.getElementById('dashboard-grid');
+        const overlayWrapper = document.getElementById('overlay-wrapper');
+        const stackedView = document.getElementById('stacked-view');
+        const stackedContainer = document.getElementById('stacked-container');
+        const stackedLegend = document.getElementById('stacked-legend');
+        const explodedView = document.getElementById('exploded-view');
         const filterContainer = document.getElementById('filter-container');
         const filterInput = document.getElementById('filter-input');
         const zoomSlider = document.getElementById('zoom-slider');
         const graphTypeSelector = document.getElementById('graph-type-selector');
         const periodSelector = document.getElementById('period-selector');
+        const overlayToggleBtn = document.getElementById('overlay-toggle-btn');
         const closeBtn = document.getElementById('close-btn');
         const hint = document.getElementById('hint');
         const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
         
-        let currentGraphType = 'traffic'; // State: 'traffic' or 'uptime'
-        let currentTimePeriod = 'day';   // State: 'day', 'week', etc.
+        let currentGraphType = 'traffic', currentTimePeriod = 'day', isOverlayMode = false;
 
         // --- FUNCTIONS ---
-        function renderSwitches(switches) {
+        function renderView() {
+            const searchTerm = filterInput.value;
+            let visibleSwitches;
+            try {
+                const regex = new RegExp(searchTerm, 'i');
+                visibleSwitches = switchData.filter(sw => regex.test(sw.switch_name));
+            } catch (e) {
+                visibleSwitches = switchData;
+            }
+
+            if (isOverlayMode) {
+                grid.style.display = 'none';
+                overlayWrapper.style.display = 'block';
+                // Render both overlay views, but only one will be visible at a time
+                renderStackedOverlay(visibleSwitches);
+                renderExplodedOverlay(visibleSwitches);
+            } else {
+                overlayWrapper.style.display = 'none';
+                grid.style.display = 'grid';
+                renderGrid(visibleSwitches);
+            }
+        }
+        
+        function renderGrid(switches) {
             grid.innerHTML = '';
             switches.forEach(sw => {
                 const card = document.createElement('div');
                 card.className = `switch-card ${sw.isActive ? '' : 'inactive'}`;
-
-                let graphUrl, detailsUrl;
-                const hostIdUnderscores = sw.host_id.replace(/-/g, '_');
-
-                if (currentGraphType === 'traffic') {
-                    graphUrl = `https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/${sw.host_id}/if_bytes-${currentTimePeriod}.png`;
-                    detailsUrl = `https://munin.ffzg.hr/snmp/${sw.host_id}/index.html`;
-                } else { // 'uptime'
-                    const uptimeGraphName = `snmp_${hostIdUnderscores}_uptime`;
-                    graphUrl = `https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/${sw.host_id}/${uptimeGraphName}-${currentTimePeriod}.png`;
-                    detailsUrl = `https://munin.ffzg.hr/snmp/${sw.host_id}/${uptimeGraphName}.html`;
-                }
-                
-                card.innerHTML = `<a href="${detailsUrl}" target="sw" class="card-link"><div class="switch-name">${sw.switch_name}</div><img src="${graphUrl}" alt="Graph for ${sw.switch_name}" class="switch-card-image"></a>`;
+                card.innerHTML = `<a href="${getDetailsUrl(sw)}" target="sw" class="card-link"><div class="switch-name">${sw.switch_name}</div><img src="${getGraphUrl(sw)}" alt="Graph for ${sw.switch_name}" class="switch-card-image"></a>`;
                 grid.appendChild(card);
             });
         }
+        
+        function renderStackedOverlay(switches) {
+            stackedContainer.innerHTML = '';
+            stackedLegend.innerHTML = '';
+            let firstImage = true;
+            switches.forEach(sw => {
+                if (!sw.isActive) return;
+                const img = document.createElement('img');
+                img.src = getGraphUrl(sw);
+                img.dataset.hostId = sw.host_id;
+                if (firstImage) {
+                    img.onload = () => stackedContainer.style.height = `${img.naturalHeight}px`;
+                    firstImage = false;
+                }
+                stackedContainer.appendChild(img);
 
-        function runFilter() {
-            const searchTerm = filterInput.value;
-            try {
-                const regex = new RegExp(searchTerm, 'i');
-                renderSwitches(switchData.filter(sw => regex.test(sw.switch_name)));
-            } catch (e) {
-                renderSwitches(switchData); // On invalid regex, show all
-            }
+                const legendItem = document.createElement('div');
+                legendItem.className = 'legend-item';
+                legendItem.textContent = sw.switch_name;
+                legendItem.dataset.hostId = sw.host_id;
+                stackedLegend.appendChild(legendItem);
+            });
         }
         
+        function renderExplodedOverlay(switches) {
+            explodedView.innerHTML = '';
+            switches.forEach(sw => {
+                if (!sw.isActive) return;
+                const item = document.createElement('div');
+                item.className = 'exploded-item';
+                item.innerHTML = `
+                    <img src="${getGraphUrl(sw)}" />
+                    <span>${sw.switch_name}</span>
+                `;
+                explodedView.appendChild(item);
+            });
+        }
+        
+        function getGraphUrl(sw) {
+            const metric = (currentGraphType === 'traffic') ? 'if_bytes' : `snmp_${sw.host_id.replace(/-/g, '_')}_uptime`;
+            return `https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/${sw.host_id}/${metric}-${currentTimePeriod}.png`;
+        }
+        
+        function getDetailsUrl(sw) {
+            if (currentGraphType === 'traffic') return `https://munin.ffzg.hr/snmp/${sw.host_id}/index.html`;
+            else return `https://munin.ffzg.hr/snmp/${sw.host_id}/snmp_${sw.host_id.replace(/-/g, '_')}_uptime.html`;
+        }
+
         function hideFilter() {
             filterInput.value = '';
             filterContainer.style.display = 'none';
-            runFilter();
+            renderView();
+        }
+
+        function setHighlight(hostId, state) {
+            document.querySelectorAll(`[data-host-id="${hostId}"]`).forEach(el => el.classList.toggle('is-highlighted', state));
         }
 
         // --- EVENT LISTENERS ---
-        filterInput.addEventListener('keyup', runFilter);
+        filterInput.addEventListener('keyup', renderView);
         zoomSlider.addEventListener('input', () => grid.style.setProperty('--card-zoom-factor', zoomSlider.value / 100));
         closeBtn.addEventListener('click', hideFilter);
 
-        graphTypeSelector.addEventListener('click', (event) => {
-            const target = event.target;
-            if (target.tagName === 'BUTTON') {
-                const newGraphType = target.dataset.graphType;
-                if (newGraphType !== currentGraphType) {
-                    currentGraphType = newGraphType;
-                    graphTypeSelector.querySelector('.active').classList.remove('active');
-                    target.classList.add('active');
-                    runFilter();
-                }
-            }
+        overlayToggleBtn.addEventListener('click', () => {
+            isOverlayMode = !isOverlayMode;
+            overlayToggleBtn.textContent = isOverlayMode ? 'Grid View' : 'Overlay';
+            overlayToggleBtn.classList.toggle('active', isOverlayMode);
+            renderView();
         });
 
-        periodSelector.addEventListener('click', (event) => {
-            const target = event.target;
-            if (target.tagName === 'BUTTON') {
-                const newPeriod = target.dataset.period;
-                if (newPeriod !== currentTimePeriod) {
-                    currentTimePeriod = newPeriod;
-                    periodSelector.querySelector('.active').classList.remove('active');
-                    target.classList.add('active');
-                    runFilter();
+        // --- Overlay Interactions ---
+        stackedContainer.addEventListener('mouseenter', () => {
+            stackedView.style.display = 'none';
+            explodedView.style.display = 'flex';
+        });
+        explodedView.addEventListener('mouseleave', () => {
+            explodedView.style.display = 'none';
+            stackedView.style.display = 'flex';
+        });
+        stackedLegend.addEventListener('mouseover', (event) => { if (event.target.dataset.hostId) setHighlight(event.target.dataset.hostId, true); });
+        stackedLegend.addEventListener('mouseout', (event) => { if (event.target.dataset.hostId) setHighlight(event.target.dataset.hostId, false); });
+
+        // Event listeners for selectors
+        [graphTypeSelector, periodSelector].forEach(selector => {
+            selector.addEventListener('click', (event) => {
+                const target = event.target;
+                if (target.tagName === 'BUTTON') {
+                    const isPeriod = selector.id === 'period-selector';
+                    const key = isPeriod ? 'period' : 'graphType';
+                    if (target.dataset[key] !== (isPeriod ? currentTimePeriod : currentGraphType)) {
+                        if (isPeriod) currentTimePeriod = target.dataset[key]; else currentGraphType = target.dataset[key];
+                        selector.querySelector('.active').classList.remove('active');
+                        target.classList.add('active');
+                        renderView();
+                    }
                 }
-            }
+            });
         });
 
         window.addEventListener('keydown', (event) => {
@@ -261,13 +313,13 @@
                 filterContainer.style.display = 'flex';
                 filterInput.focus();
                 filterInput.value = event.key;
-                runFilter();
+                renderView();
                 event.preventDefault();
             }
         });
 
         // --- INITIALIZATION ---
-        renderSwitches(switchData);
+        renderView();
         setTimeout(() => hint.classList.add('hint--hidden'), 1000);
 
     </script>
