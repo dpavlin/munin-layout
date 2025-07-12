@@ -65,21 +65,21 @@
             border: 1px solid #ddd;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-            padding: 15px 20px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+            /* Padding removed from card and added to the link wrapper */
+            transition: opacity 0.2s;
         }
 
-        .switch-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-        }
-
-        .switch-card-link {
+        /* Make the entire card a clickable link */
+        .card-link {
+            display: block;
             text-decoration: none;
+            color: inherit;
+            padding: 15px 20px;
+            height: 100%;
+            box-sizing: border-box;
+        }
+        
+        .switch-name {
             color: #007bff;
             font-weight: bold;
             font-size: 1.2em;
@@ -87,10 +87,10 @@
             display: block;
         }
 
-        .switch-card-link:hover {
+        .card-link:hover .switch-name {
             text-decoration: underline;
         }
-
+        
         .switch-card-image {
             max-width: 100%;
             height: auto;
@@ -103,12 +103,11 @@
             filter: grayscale(80%);
         }
 
-        .switch-card.inactive:hover {
-             opacity: 0.6; /* Slightly increase visibility on hover */
-        }
-
-        .switch-card.inactive .switch-card-link {
+        .switch-card.inactive .card-link {
             pointer-events: none; /* Make link not clickable */
+        }
+        
+        .switch-card.inactive .switch-name {
             color: #6c757d;
         }
 
@@ -129,7 +128,6 @@
 
     <script>
         // --- DATA STRUCTURE WITH FULL CONTEXT ---
-        // Active switches are listed first.
         const activeSwitchNames = [
             'sw-core', 'sw-dpc-1', 'sw-dpc-2', 'sw-r1sfp', 'sw-rack1', 'sw-ganeti', 'sw-rack2', 
             'sw-lib-srv (rack3)', 'sw-a000-j', 'sw-a000-s', 'sw-a100-j', 'sw-a100-j-2', 'sw-a100-s', 
@@ -144,20 +142,12 @@
             'sw-lib-wifi'
         ];
         
-        // These names were extracted from the commented-out sections of the original HTML.
         const commentedSwitchNames = [
             'sw-cpf', 'sw-dpc', 'sw-b101', 'sw-b101-n'
         ];
 
         // --- DYNAMIC DATA GENERATION ---
-        /**
-         * Generates the full switch data array from lists of names, including status.
-         * @param {Array<string>} activeNames - Array of active switch display names.
-         * @param {Array<string>} commentedNames - Array of commented-out switch names.
-         * @returns {Array<Object>} The full array of switch data objects with an `isActive` flag.
-         */
         function generateSwitchData(activeNames, commentedNames) {
-            // *** FIX APPLIED HERE: URLs now use https:// ***
             const GRAPH_URL_TEMPLATE = "https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
             const DETAILS_URL_TEMPLATE = "https://munin.ffzg.hr/snmp/{ID}/index.html";
 
@@ -174,7 +164,6 @@
             const activeSwitches = activeNames.map(name => createObject(name, true));
             const commentedSwitches = commentedNames.map(name => createObject(name, false));
 
-            // Combine both lists into a single data source.
             return activeSwitches.concat(commentedSwitches);
         }
 
@@ -182,23 +171,20 @@
         const grid = document.getElementById('dashboard-grid');
         const filterInput = document.getElementById('filter-input');
         
-        // Generate the complete data structure, now including commented items.
         const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
 
-        /**
-         * Renders a list of switches to the dashboard grid, applying styles based on status.
-         * @param {Array<Object>} switches - An array of switch objects to display.
-         */
         function renderSwitches(switches) {
             grid.innerHTML = '';
             switches.forEach(sw => {
                 const card = document.createElement('div');
-                // Add the 'inactive' class if the switch was commented out.
                 card.className = `switch-card ${sw.isActive ? '' : 'inactive'}`;
                 
+                // --- MODIFIED: The entire card is now a single link ---
                 card.innerHTML = `
-                    <a href="${sw.details_url}" target="_blank" class="switch-card-link">${sw.switch_name}</a>
-                    <img src="${sw.graph_url}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image">
+                    <a href="${sw.details_url}" target="sw" class="card-link">
+                        <div class="switch-name">${sw.switch_name}</div>
+                        <img src="${sw.graph_url}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image">
+                    </a>
                 `;
                 grid.appendChild(card);
             });
@@ -208,7 +194,6 @@
         filterInput.addEventListener('keyup', () => {
             const searchTerm = filterInput.value;
 
-            // If the search bar is cleared, show all switches and reset border color.
             if (!searchTerm) {
                 renderSwitches(switchData);
                 filterInput.style.borderColor = '#ccd0d5';
@@ -218,25 +203,21 @@
             let filteredSwitches;
             
             try {
-                // Treat the input as a case-insensitive regular expression.
                 const regex = new RegExp(searchTerm, 'i');
                 filteredSwitches = switchData.filter(sw => regex.test(sw.switch_name));
-                // Set border color to green for valid regex patterns.
                 filterInput.style.borderColor = '#28a745';
             } catch (e) {
-                // If the regex is invalid, fall back to a simple, case-insensitive substring search.
                 const lowerCaseSearchTerm = searchTerm.toLowerCase();
                 filteredSwitches = switchData.filter(sw => 
                     sw.switch_name.toLowerCase().includes(lowerCaseSearchTerm)
                 );
-                // Set border color to red for invalid regex to give user feedback.
                 filterInput.style.borderColor = '#dc3545';
             }
             
             renderSwitches(filteredSwitches);
         });
 
-        // Initial render of all switches (active and inactive) when the page loads.
+        // Initial render of all switches.
         renderSwitches(switchData);
 
     </script>
