@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dynamic SNMP Monitoring Dashboard</title>
+    <title>Advanced SNMP Monitoring Dashboard</title>
     <style>
         /* General Body Styles */
         body {
@@ -21,10 +21,11 @@
             color: #1c1e21;
         }
 
-        /* Filter/Search Input Styles */
+        /* Filter Container and Help Text */
         .filter-container {
             display: flex;
-            justify-content: center;
+            flex-direction: column;
+            align-items: center;
             margin-bottom: 30px;
         }
 
@@ -41,8 +42,14 @@
 
         #filter-input:focus {
             outline: none;
-            border-color: #007bff;
             box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        .filter-note {
+            text-align: center;
+            font-size: 0.9em;
+            color: #606770;
+            margin-top: 10px;
         }
 
         /* Dashboard Grid Layout */
@@ -94,19 +101,19 @@
 </head>
 <body>
 
-    <h1>FFZG SNMP Monitoring (Dynamic)</h1>
+    <h1>Advanced SNMP Monitoring</h1>
 
     <div class="filter-container">
-        <input type="text" id="filter-input" placeholder="Type to filter switches by name...">
+        <input type="text" id="filter-input" placeholder="Filter by name or regex pattern...">
+        <p class="filter-note">Supports plain text and regular expressions (e.g., "lib-[ab]", "^sw-a", "rack.$").</p>
     </div>
 
     <div class="dashboard-grid" id="dashboard-grid">
-        <!-- Switch cards will be dynamically inserted here -->
+        <!-- Switch cards are dynamically inserted here -->
     </div>
 
     <script>
         // --- COMPRESSED DATA STRUCTURE ---
-        // We only need to store the unique names. The full URLs will be generated from these.
         const switchDisplayNames = [
             'sw-core', 'sw-dpc-1', 'sw-dpc-2', 'sw-r1sfp', 'sw-rack1', 'sw-ganeti', 'sw-rack2', 
             'sw-lib-srv (rack3)', 'sw-a000-j', 'sw-a000-s', 'sw-a100-j', 'sw-a100-j-2', 'sw-a100-s', 
@@ -122,24 +129,12 @@
         ];
 
         // --- DYNAMIC DATA GENERATION ---
-        /**
-         * Generates the full switch data array from a list of names.
-         * @param {Array<string>} displayNames - Array of switch display names.
-         * @returns {Array<Object>} The full array of switch data objects.
-         */
         function generateSwitchData(displayNames) {
-            // URL templates derived from the HTML structure analysis
-            const GRAPH_URL_TEMPLATE = "///munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
-            const DETAILS_URL_TEMPLATE = "///munin.ffzg.hr/snmp/{ID}/index.html";
-            // NOTE: The original HTML uses ///, which modern browsers may interpret differently.
-            // Using "https://" is safer if the domain is known to be absolute.
-            // For this exercise, we will keep the original structure.
+            const GRAPH_URL_TEMPLATE = "https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
+            const DETAILS_URL_TEMPLATE = "https://munin.ffzg.hr/snmp/{ID}/index.html";
 
             return displayNames.map(displayName => {
-                // The ID for the URL is the part of the name before any space.
-                // This handles cases like "sw-lib-srv (rack3)".
                 const urlId = displayName.split(' ')[0];
-
                 return {
                     switch_name: displayName,
                     graph_url: GRAPH_URL_TEMPLATE.replace('{ID}', urlId),
@@ -148,17 +143,11 @@
             });
         }
 
-        // --- RENDERING AND FILTERING LOGIC (Unchanged) ---
+        // --- RENDERING AND FILTERING LOGIC ---
         const grid = document.getElementById('dashboard-grid');
         const filterInput = document.getElementById('filter-input');
-        
-        // Generate the full data structure from our compressed list
         const switchData = generateSwitchData(switchDisplayNames);
 
-        /**
-         * Renders a list of switches to the dashboard grid.
-         * @param {Array} switches - An array of switch objects to display.
-         */
         function renderSwitches(switches) {
             grid.innerHTML = '';
             switches.forEach(sw => {
@@ -172,16 +161,41 @@
             });
         }
 
-        // Add event listener for the filter input field
+        // --- UPDATED EVENT LISTENER WITH REGEX SUPPORT ---
         filterInput.addEventListener('keyup', () => {
-            const searchTerm = filterInput.value.toLowerCase();
-            const filteredSwitches = switchData.filter(sw => 
-                sw.switch_name.toLowerCase().includes(searchTerm)
-            );
+            const searchTerm = filterInput.value;
+
+            if (!searchTerm) {
+                renderSwitches(switchData);
+                filterInput.style.borderColor = '#ccd0d5'; // Reset border
+                return;
+            }
+
+            let filteredSwitches;
+            
+            try {
+                // Treat the input as a case-insensitive regular expression
+                const regex = new RegExp(searchTerm, 'i');
+                
+                filteredSwitches = switchData.filter(sw => regex.test(sw.switch_name));
+                
+                // Visual feedback for valid regex
+                filterInput.style.borderColor = '#28a745'; // Green
+            } catch (e) {
+                // If regex is invalid, fall back to simple substring search
+                const lowerCaseSearchTerm = searchTerm.toLowerCase();
+                filteredSwitches = switchData.filter(sw => 
+                    sw.switch_name.toLowerCase().includes(lowerCaseSearchTerm)
+                );
+                
+                // Visual feedback for invalid regex
+                filterInput.style.borderColor = '#dc3545'; // Red
+            }
+            
             renderSwitches(filteredSwitches);
         });
 
-        // Initial render of all switches when the page loads
+        // Initial render of all switches
         renderSwitches(switchData);
 
     </script>
