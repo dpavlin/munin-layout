@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Advanced SNMP Monitoring Dashboard</title>
+    <title>Complete SNMP Monitoring Dashboard</title>
     <style>
         /* General Body Styles */
         body {
@@ -70,7 +70,7 @@
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            transition: transform 0.2s, box-shadow 0.2s;
+            transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
         }
 
         .switch-card:hover {
@@ -96,15 +96,30 @@
             height: auto;
             border-radius: 4px;
         }
+        
+        /* Styles for commented-out (inactive) switches */
+        .switch-card.inactive {
+            opacity: 0.4;
+            filter: grayscale(80%);
+        }
+
+        .switch-card.inactive:hover {
+             opacity: 0.6; /* Slightly increase visibility on hover */
+        }
+
+        .switch-card.inactive .switch-card-link {
+            pointer-events: none; /* Make link not clickable */
+            color: #6c757d;
+        }
 
     </style>
 </head>
 <body>
 
-    <h1>Advanced SNMP Monitoring</h1>
+    <h1>Complete SNMP Monitoring</h1>
 
     <div class="filter-container">
-        <input type="text" id="filter-input" placeholder="Filter by name or regex pattern...">
+        <input type="text" id="filter-input" placeholder="Filter all devices by name or regex...">
         <p class="filter-note">Supports plain text and regular expressions (e.g., "lib-[ab]", "^sw-a", "rack.$").</p>
     </div>
 
@@ -113,8 +128,9 @@
     </div>
 
     <script>
-        // --- COMPRESSED DATA STRUCTURE ---
-        const switchDisplayNames = [
+        // --- DATA STRUCTURE WITH FULL CONTEXT ---
+        // Active switches are listed first.
+        const activeSwitchNames = [
             'sw-core', 'sw-dpc-1', 'sw-dpc-2', 'sw-r1sfp', 'sw-rack1', 'sw-ganeti', 'sw-rack2', 
             'sw-lib-srv (rack3)', 'sw-a000-j', 'sw-a000-s', 'sw-a100-j', 'sw-a100-j-2', 'sw-a100-s', 
             'sw-a121', 'sw-a125a', 'sw-a125-ss', 'sw-a200', 'sw-a200-j', 'sw-a200-j-2', 'sw-a200-s', 
@@ -127,32 +143,58 @@
             'sw-lib-n', 'sw-lib-o', 'sw-lib-p', 'sw-lib-q', 'sw-lib-r', 'sw-lib-s', 'sw-lib-zs', 
             'sw-lib-wifi'
         ];
+        
+        // These names were extracted from the commented-out sections of the original HTML.
+        const commentedSwitchNames = [
+            'sw-cpf', 'sw-dpc', 'sw-b101', 'sw-b101-n'
+        ];
 
         // --- DYNAMIC DATA GENERATION ---
-        function generateSwitchData(displayNames) {
-            const GRAPH_URL_TEMPLATE = "https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
-            const DETAILS_URL_TEMPLATE = "https://munin.ffzg.hr/snmp/{ID}/index.html";
+        /**
+         * Generates the full switch data array from lists of names, including status.
+         * @param {Array<string>} activeNames - Array of active switch display names.
+         * @param {Array<string>} commentedNames - Array of commented-out switch names.
+         * @returns {Array<Object>} The full array of switch data objects with an `isActive` flag.
+         */
+        function generateSwitchData(activeNames, commentedNames) {
+            const GRAPH_URL_TEMPLATE = "///munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
+            const DETAILS_URL_TEMPLATE = "///munin.ffzg.hr/snmp/{ID}/index.html";
 
-            return displayNames.map(displayName => {
+            const createObject = (displayName, isActive) => {
                 const urlId = displayName.split(' ')[0];
                 return {
                     switch_name: displayName,
                     graph_url: GRAPH_URL_TEMPLATE.replace('{ID}', urlId),
-                    details_url: DETAILS_URL_TEMPLATE.replace('{ID}', urlId)
+                    details_url: DETAILS_URL_TEMPLATE.replace('{ID}', urlId),
+                    isActive: isActive
                 };
-            });
+            };
+
+            const activeSwitches = activeNames.map(name => createObject(name, true));
+            const commentedSwitches = commentedNames.map(name => createObject(name, false));
+
+            // Combine both lists into a single data source.
+            return activeSwitches.concat(commentedSwitches);
         }
 
         // --- RENDERING AND FILTERING LOGIC ---
         const grid = document.getElementById('dashboard-grid');
         const filterInput = document.getElementById('filter-input');
-        const switchData = generateSwitchData(switchDisplayNames);
+        
+        // Generate the complete data structure, now including commented items.
+        const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
 
+        /**
+         * Renders a list of switches to the dashboard grid, applying styles based on status.
+         * @param {Array<Object>} switches - An array of switch objects to display.
+         */
         function renderSwitches(switches) {
             grid.innerHTML = '';
             switches.forEach(sw => {
                 const card = document.createElement('div');
-                card.className = 'switch-card';
+                // Add the 'inactive' class if the switch was commented out.
+                card.className = `switch-card ${sw.isActive ? '' : 'inactive'}`;
+                
                 card.innerHTML = `
                     <a href="${sw.details_url}" target="_blank" class="switch-card-link">${sw.switch_name}</a>
                     <img src="${sw.graph_url}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image">
@@ -161,41 +203,39 @@
             });
         }
 
-        // --- UPDATED EVENT LISTENER WITH REGEX SUPPORT ---
+        // --- EVENT LISTENER WITH REGEX SUPPORT ---
         filterInput.addEventListener('keyup', () => {
             const searchTerm = filterInput.value;
 
+            // If the search bar is cleared, show all switches and reset border color.
             if (!searchTerm) {
                 renderSwitches(switchData);
-                filterInput.style.borderColor = '#ccd0d5'; // Reset border
+                filterInput.style.borderColor = '#ccd0d5';
                 return;
             }
 
             let filteredSwitches;
             
             try {
-                // Treat the input as a case-insensitive regular expression
+                // Treat the input as a case-insensitive regular expression.
                 const regex = new RegExp(searchTerm, 'i');
-                
                 filteredSwitches = switchData.filter(sw => regex.test(sw.switch_name));
-                
-                // Visual feedback for valid regex
-                filterInput.style.borderColor = '#28a745'; // Green
+                // Set border color to green for valid regex patterns.
+                filterInput.style.borderColor = '#28a745';
             } catch (e) {
-                // If regex is invalid, fall back to simple substring search
+                // If the regex is invalid, fall back to a simple, case-insensitive substring search.
                 const lowerCaseSearchTerm = searchTerm.toLowerCase();
                 filteredSwitches = switchData.filter(sw => 
                     sw.switch_name.toLowerCase().includes(lowerCaseSearchTerm)
                 );
-                
-                // Visual feedback for invalid regex
-                filterInput.style.borderColor = '#dc3545'; // Red
+                // Set border color to red for invalid regex to give user feedback.
+                filterInput.style.borderColor = '#dc3545';
             }
             
             renderSwitches(filteredSwitches);
         });
 
-        // Initial render of all switches
+        // Initial render of all switches (active and inactive) when the page loads.
         renderSwitches(switchData);
 
     </script>
