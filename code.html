@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dynamic SNMP Monitoring Dashboard</title>
+    <style>
+        /* General Body Styles */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+
+        /* Page Header */
+        h1 {
+            text-align: center;
+            margin-bottom: 25px;
+            color: #1c1e21;
+        }
+
+        /* Filter/Search Input Styles */
+        .filter-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 30px;
+        }
+
+        #filter-input {
+            width: 50%;
+            max-width: 600px;
+            padding: 12px 20px;
+            font-size: 16px;
+            border-radius: 50px;
+            border: 1px solid #ccd0d5;
+            transition: all 0.2s ease-in-out;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        #filter-input:focus {
+            outline: none;
+            border-color: #007bff;
+            box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.25);
+        }
+
+        /* Dashboard Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(400px, 1fr));
+            gap: 20px;
+        }
+
+        /* Switch Card Styles */
+        .switch-card {
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            padding: 15px 20px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .switch-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+        }
+
+        .switch-card-link {
+            text-decoration: none;
+            color: #007bff;
+            font-weight: bold;
+            font-size: 1.2em;
+            margin-bottom: 15px;
+            display: block;
+        }
+
+        .switch-card-link:hover {
+            text-decoration: underline;
+        }
+
+        .switch-card-image {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+    </style>
+</head>
+<body>
+
+    <h1>FFZG SNMP Monitoring (Dynamic)</h1>
+
+    <div class="filter-container">
+        <input type="text" id="filter-input" placeholder="Type to filter switches by name...">
+    </div>
+
+    <div class="dashboard-grid" id="dashboard-grid">
+        <!-- Switch cards will be dynamically inserted here -->
+    </div>
+
+    <script>
+        // --- COMPRESSED DATA STRUCTURE ---
+        // We only need to store the unique names. The full URLs will be generated from these.
+        const switchDisplayNames = [
+            'sw-core', 'sw-dpc-1', 'sw-dpc-2', 'sw-r1sfp', 'sw-rack1', 'sw-ganeti', 'sw-rack2', 
+            'sw-lib-srv (rack3)', 'sw-a000-j', 'sw-a000-s', 'sw-a100-j', 'sw-a100-j-2', 'sw-a100-s', 
+            'sw-a121', 'sw-a125a', 'sw-a125-ss', 'sw-a200', 'sw-a200-j', 'sw-a200-j-2', 'sw-a200-s', 
+            'sw-a204', 'sw-a212', 'sw-a212-2', 'sw-a215', 'sw-aula', 'sw-aula-2', 'sw-b000', 
+            'sw-b000-2', 'sw-b100', 'sw-b100-2', 'sw-b200', 'sw-b200-2', 'sw-b300', 'sw-baraka', 
+            'sw-c000', 'sw-c000-2', 'sw-c100', 'sw-c200', 'sw-c300', 'sw-c300-2', 'sw-ctrl', 
+            'sw-dekanat', 'sw-dekanat-2', 'sw-e300', 'sw-e300-2', 'sw-fond-1', 'sw-fond', 'sw-lib', 
+            'sw-lib-a', 'sw-lib-b', 'sw-lib-c', 'sw-lib-cr1', 'sw-lib-d', 'sw-lib-e', 'sw-lib-f', 
+            'sw-lib-g', 'sw-lib-h', 'sw-lib-i', 'sw-lib-j', 'sw-lib-k', 'sw-lib-l', 'sw-lib-m', 
+            'sw-lib-n', 'sw-lib-o', 'sw-lib-p', 'sw-lib-q', 'sw-lib-r', 'sw-lib-s', 'sw-lib-zs', 
+            'sw-lib-wifi'
+        ];
+
+        // --- DYNAMIC DATA GENERATION ---
+        /**
+         * Generates the full switch data array from a list of names.
+         * @param {Array<string>} displayNames - Array of switch display names.
+         * @returns {Array<Object>} The full array of switch data objects.
+         */
+        function generateSwitchData(displayNames) {
+            // URL templates derived from the HTML structure analysis
+            const GRAPH_URL_TEMPLATE = "///munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-day.png";
+            const DETAILS_URL_TEMPLATE = "///munin.ffzg.hr/snmp/{ID}/index.html";
+            // NOTE: The original HTML uses ///, which modern browsers may interpret differently.
+            // Using "https://" is safer if the domain is known to be absolute.
+            // For this exercise, we will keep the original structure.
+
+            return displayNames.map(displayName => {
+                // The ID for the URL is the part of the name before any space.
+                // This handles cases like "sw-lib-srv (rack3)".
+                const urlId = displayName.split(' ')[0];
+
+                return {
+                    switch_name: displayName,
+                    graph_url: GRAPH_URL_TEMPLATE.replace('{ID}', urlId),
+                    details_url: DETAILS_URL_TEMPLATE.replace('{ID}', urlId)
+                };
+            });
+        }
+
+        // --- RENDERING AND FILTERING LOGIC (Unchanged) ---
+        const grid = document.getElementById('dashboard-grid');
+        const filterInput = document.getElementById('filter-input');
+        
+        // Generate the full data structure from our compressed list
+        const switchData = generateSwitchData(switchDisplayNames);
+
+        /**
+         * Renders a list of switches to the dashboard grid.
+         * @param {Array} switches - An array of switch objects to display.
+         */
+        function renderSwitches(switches) {
+            grid.innerHTML = '';
+            switches.forEach(sw => {
+                const card = document.createElement('div');
+                card.className = 'switch-card';
+                card.innerHTML = `
+                    <a href="${sw.details_url}" target="_blank" class="switch-card-link">${sw.switch_name}</a>
+                    <img src="${sw.graph_url}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image">
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // Add event listener for the filter input field
+        filterInput.addEventListener('keyup', () => {
+            const searchTerm = filterInput.value.toLowerCase();
+            const filteredSwitches = switchData.filter(sw => 
+                sw.switch_name.toLowerCase().includes(searchTerm)
+            );
+            renderSwitches(filteredSwitches);
+        });
+
+        // Initial render of all switches when the page loads
+        renderSwitches(switchData);
+
+    </script>
+</body>
+</html>
