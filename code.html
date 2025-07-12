@@ -70,9 +70,8 @@
             padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; z-index: 1;
         }
         .switch-card-image { display: block; max-width: 100%; height: auto; border-radius: 8px; }
-        .switch-card.inactive { opacity: 0.4; filter: grayscale(80%); pointer-events: none; }
         
-        /* --- MODIFIED: Overlay System --- */
+        /* Overlay System */
         #overlay-wrapper {
             display: none; /* Hidden by default */
             width: 95%;
@@ -90,7 +89,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            /* mix-blend-mode and opacity are now controlled by JS */
+            /* mix-blend-mode and opacity are controlled by JS */
             transition: opacity 0.2s ease-in-out;
             pointer-events: none; /* Images don't need to be interactive */
         }
@@ -145,12 +144,11 @@
     <script>
         // --- DATA STRUCTURE ---
         const activeSwitchNames = ['sw-core', 'sw-dpc-1', 'sw-dpc-2', 'sw-r1sfp', 'sw-rack1', 'sw-ganeti', 'sw-rack2', 'sw-lib-srv (rack3)', 'sw-a000-j', 'sw-a000-s', 'sw-a100-j', 'sw-a100-j-2', 'sw-a100-s', 'sw-a121', 'sw-a125a', 'sw-a125-ss', 'sw-a200', 'sw-a200-j', 'sw-a200-j-2', 'sw-a200-s', 'sw-a204', 'sw-a212', 'sw-a212-2', 'sw-a215', 'sw-aula', 'sw-aula-2', 'sw-b000', 'sw-b000-2', 'sw-b100', 'sw-b100-2', 'sw-b200', 'sw-b200-2', 'sw-b300', 'sw-baraka', 'sw-c000', 'sw-c000-2', 'sw-c100', 'sw-c200', 'sw-c300', 'sw-c300-2', 'sw-ctrl', 'sw-dekanat', 'sw-dekanat-2', 'sw-e300', 'sw-e300-2', 'sw-fond-1', 'sw-fond', 'sw-lib', 'sw-lib-a', 'sw-lib-b', 'sw-lib-c', 'sw-lib-cr1', 'sw-lib-d', 'sw-lib-e', 'sw-lib-f', 'sw-lib-g', 'sw-lib-h', 'sw-lib-i', 'sw-lib-j', 'sw-lib-k', 'sw-lib-l', 'sw-lib-m', 'sw-lib-n', 'sw-lib-o', 'sw-lib-p', 'sw-lib-q', 'sw-lib-r', 'sw-lib-s', 'sw-lib-zs', 'sw-lib-wifi'];
-        const commentedSwitchNames = ['sw-cpf', 'sw-dpc', 'sw-b101', 'sw-b101-n'];
 
         // --- DYNAMIC DATA GENERATION ---
-        function generateSwitchData(activeNames, commentedNames) {
-            const createObject = (displayName, isActive) => ({ switch_name: displayName, host_id: displayName.split(' ')[0], isActive });
-            return activeNames.map(name => createObject(name, true)).concat(commentedNames.map(name => createObject(name, false)));
+        function generateSwitchData(activeNames) {
+            const createObject = (displayName) => ({ switch_name: displayName, host_id: displayName.split(' ')[0] });
+            return activeNames.map(name => createObject(name));
         }
 
         // --- DOM ELEMENTS AND STATE ---
@@ -166,7 +164,7 @@
               overlayToggleBtn = document.getElementById('overlay-toggle-btn'),
               closeBtn = document.getElementById('close-btn'),
               hint = document.getElementById('hint'),
-              switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
+              switchData = generateSwitchData(activeSwitchNames);
         
         let currentGraphType = 'traffic', currentTimePeriod = 'day', isOverlayMode = false;
 
@@ -194,7 +192,7 @@
             grid.innerHTML = '';
             switches.forEach(sw => {
                 const card = document.createElement('div');
-                card.className = `switch-card ${sw.isActive ? '' : 'inactive'}`;
+                card.className = 'switch-card';
                 card.innerHTML = `<a href="${getDetailsUrl(sw)}" target="sw" class="card-link"><div class="switch-name">${sw.switch_name}</div><img src="${getGraphUrl(sw)}" alt="Graph for ${sw.switch_name}" class="switch-card-image"></a>`;
                 grid.appendChild(card);
             });
@@ -205,11 +203,10 @@
             overlaySwitchList.innerHTML = '';
             let firstImage = true;
             switches.forEach(sw => {
-                if (!sw.isActive) return;
                 const img = document.createElement('img');
                 img.src = getGraphUrl(sw);
                 img.dataset.hostId = sw.host_id;
-                img.style.opacity = '0.5'; // Default blended state
+                img.style.opacity = '0.5';
                 img.style.mixBlendMode = 'multiply';
                 if (firstImage) {
                     img.onload = () => overlayContainer.style.height = `${img.naturalHeight}px`;
@@ -249,15 +246,15 @@
             renderView();
         });
         
-        // --- MODIFIED: Overlay interaction ---
+        // --- CORRECTED OVERLAY INTERACTION ---
         overlaySwitchList.addEventListener('mouseover', (event) => {
             const target = event.target.closest('.switch-list-item');
             if (target) {
                 const targetHostId = target.dataset.hostId;
                 overlayContainer.querySelectorAll('img').forEach(img => {
                     const isTarget = img.dataset.hostId === targetHostId;
-                    img.style.opacity = isTarget ? '1' : '0';
-                    img.style.mixBlendMode = isTarget ? 'normal' : 'multiply';
+                    img.style.opacity = isTarget ? '1' : '0'; // Only show the target
+                    img.style.mixBlendMode = isTarget ? 'normal' : 'multiply'; // Use normal blend for the target
                 });
             }
         });
