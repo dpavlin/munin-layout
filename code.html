@@ -23,12 +23,12 @@
             flex-wrap: wrap;
             justify-content: center;
             align-items: center;
-            gap: 20px;
+            gap: 15px;
         }
 
         #filter-input {
-            width: 40%;
-            max-width: 400px;
+            width: 30%;
+            max-width: 300px;
             padding: 12px 20px;
             font-size: 18px;
             border-radius: 50px;
@@ -50,25 +50,24 @@
             width: 120px;
         }
 
-        /* --- MODIFIED: Period Selector --- */
-        .period-selector button {
+        /* --- Button Group Styles (for Period and Graph Type) --- */
+        .selector-group button {
             background-color: #fff;
             border: 1px solid #ccc;
             padding: 8px 15px;
             cursor: pointer;
             transition: background-color 0.2s;
         }
-        .period-selector button:first-child { border-radius: 20px 0 0 20px; }
-        .period-selector button:last-child { border-radius: 0 20px 20px 0; }
-        .period-selector button:not(:last-child) { border-right: none; }
-        .period-selector button:hover { background-color: #f1f1f1; }
-        .period-selector button.active {
+        .selector-group button:first-child { border-radius: 20px 0 0 20px; }
+        .selector-group button:last-child { border-radius: 0 20px 20px 0; }
+        .selector-group button:not(:last-child) { border-right: none; }
+        .selector-group button:hover { background-color: #f1f1f1; }
+        .selector-group button.active {
             background-color: #007bff;
             color: white;
             border-color: #007bff;
             font-weight: bold;
         }
-
 
         /* Close Button */
         #close-btn {
@@ -129,7 +128,11 @@
 
     <div id="filter-container">
         <input type="text" id="filter-input">
-        <div class="period-selector">
+        <div class="selector-group" id="graph-type-selector">
+            <button class="active" data-graph-type="traffic">Traffic</button>
+            <button data-graph-type="uptime">Uptime</button>
+        </div>
+        <div class="selector-group" id="period-selector">
             <button class="active" data-period="day">Day</button>
             <button data-period="week">Week</button>
             <button data-period="month">Month</button>
@@ -156,13 +159,10 @@
 
         // --- DYNAMIC DATA GENERATION ---
         function generateSwitchData(activeNames, commentedNames) {
-            // NOTE: URL now has a {PERIOD} placeholder.
-            const GRAPH_URL_TEMPLATE = "https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/{ID}/if_bytes-{PERIOD}.png";
-            const DETAILS_URL_TEMPLATE = "https://munin.ffzg.hr/snmp/{ID}/index.html";
+            // Simplified data object: we'll build URLs on the fly during render
             const createObject = (displayName, isActive) => ({
                 switch_name: displayName,
-                graph_url_template: GRAPH_URL_TEMPLATE.replace('{ID}', displayName.split(' ')[0]),
-                details_url: DETAILS_URL_TEMPLATE.replace('{ID}', displayName.split(' ')[0]),
+                host_id: displayName.split(' ')[0], // e.g., "sw-lib-srv"
                 isActive: isActive
             });
             return activeNames.map(name => createObject(name, true)).concat(commentedNames.map(name => createObject(name, false)));
@@ -173,11 +173,14 @@
         const filterContainer = document.getElementById('filter-container');
         const filterInput = document.getElementById('filter-input');
         const zoomSlider = document.getElementById('zoom-slider');
-        const periodSelector = document.querySelector('.period-selector');
+        const graphTypeSelector = document.getElementById('graph-type-selector');
+        const periodSelector = document.getElementById('period-selector');
         const closeBtn = document.getElementById('close-btn');
         const hint = document.getElementById('hint');
         const switchData = generateSwitchData(activeSwitchNames, commentedSwitchNames);
-        let currentTimePeriod = 'day'; // State for the current time period
+        
+        let currentGraphType = 'traffic'; // State: 'traffic' or 'uptime'
+        let currentTimePeriod = 'day';   // State: 'day', 'week', etc.
 
         // --- FUNCTIONS ---
         function renderSwitches(switches) {
@@ -185,9 +188,20 @@
             switches.forEach(sw => {
                 const card = document.createElement('div');
                 card.className = `switch-card ${sw.isActive ? '' : 'inactive'}`;
-                // Dynamically build the graph URL using the current time period
-                const graphUrl = sw.graph_url_template.replace('{PERIOD}', currentTimePeriod);
-                card.innerHTML = `<a href="${sw.details_url}" target="sw" class="card-link"><div class="switch-name">${sw.switch_name}</div><img src="${graphUrl}" alt="Traffic graph for ${sw.switch_name}" class="switch-card-image"></a>`;
+
+                let graphUrl, detailsUrl;
+                const hostIdUnderscores = sw.host_id.replace(/-/g, '_');
+
+                if (currentGraphType === 'traffic') {
+                    graphUrl = `https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/${sw.host_id}/if_bytes-${currentTimePeriod}.png`;
+                    detailsUrl = `https://munin.ffzg.hr/snmp/${sw.host_id}/index.html`;
+                } else { // 'uptime'
+                    const uptimeGraphName = `snmp_${hostIdUnderscores}_uptime`;
+                    graphUrl = `https://munin.ffzg.hr/munin-cgi/munin-cgi-graph/snmp/${sw.host_id}/${uptimeGraphName}-${currentTimePeriod}.png`;
+                    detailsUrl = `https://munin.ffzg.hr/snmp/${sw.host_id}/${uptimeGraphName}.html`;
+                }
+                
+                card.innerHTML = `<a href="${detailsUrl}" target="sw" class="card-link"><div class="switch-name">${sw.switch_name}</div><img src="${graphUrl}" alt="Graph for ${sw.switch_name}" class="switch-card-image"></a>`;
                 grid.appendChild(card);
             });
         }
@@ -213,18 +227,28 @@
         zoomSlider.addEventListener('input', () => grid.style.setProperty('--card-zoom-factor', zoomSlider.value / 100));
         closeBtn.addEventListener('click', hideFilter);
 
-        // MODIFIED: Handle clicks on the period selector
+        graphTypeSelector.addEventListener('click', (event) => {
+            const target = event.target;
+            if (target.tagName === 'BUTTON') {
+                const newGraphType = target.dataset.graphType;
+                if (newGraphType !== currentGraphType) {
+                    currentGraphType = newGraphType;
+                    graphTypeSelector.querySelector('.active').classList.remove('active');
+                    target.classList.add('active');
+                    runFilter();
+                }
+            }
+        });
+
         periodSelector.addEventListener('click', (event) => {
             const target = event.target;
-            // Only act if a button was clicked
             if (target.tagName === 'BUTTON') {
                 const newPeriod = target.dataset.period;
                 if (newPeriod !== currentTimePeriod) {
-                    currentTimePeriod = newPeriod; // Update the state
-                    // Update visual styles
+                    currentTimePeriod = newPeriod;
                     periodSelector.querySelector('.active').classList.remove('active');
                     target.classList.add('active');
-                    runFilter(); // Re-render the grid with new graph URLs
+                    runFilter();
                 }
             }
         });
