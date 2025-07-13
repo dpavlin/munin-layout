@@ -29,8 +29,12 @@
 
         #filter-input { width: 30%; max-width: 300px; padding: 12px 20px; font-size: 18px; border-radius: 50px; border: 1px solid #ccc; }
         #filter-input:focus { outline: none; border-color: #007bff; }
-        .zoom-control { display: flex; align-items: center; gap: 10px; color: #555; }
-        #zoom-slider { width: 120px; }
+        
+        /* --- MODIFIED: Column Control with Slider --- */
+        .column-control { display: flex; align-items: center; gap: 10px; color: #555; }
+        #column-slider { width: 120px; }
+        #column-count { font-weight: bold; min-width: 20px; text-align: center; }
+
 
         /* Button Group Styles */
         .selector-group button {
@@ -49,12 +53,10 @@
         }
         #close-btn:hover { color: #343a40; }
 
-        /* Dynamic Grid Layout */
+        /* Grid Layout */
         .dashboard-grid {
             display: grid;
-            --card-zoom-factor: 1; 
-            --card-base-width: 280px; 
-            grid-template-columns: repeat(auto-fill, minmax(calc(var(--card-base-width) * var(--card-zoom-factor)), 1fr));
+            grid-template-columns: repeat(4, 1fr); /* Default, overridden by JS */
             gap: 15px;
             padding: 15px;
         }
@@ -72,45 +74,43 @@
         .switch-card-image { display: block; max-width: 100%; height: auto; border-radius: 8px; }
         
         /* Overlay System */
-        #overlay-wrapper {
-            display: none; /* Hidden by default */
-            width: 95%;
-            max-width: 1200px;
-            margin: 20px auto;
-        }
-        #overlay-container { 
-            position: relative; 
-            background-color: #fff; /* White background for correct blending */
-            border: 1px solid #ccc;
-        }
-        #overlay-container img {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            /* mix-blend-mode and opacity are controlled by JS */
-            transition: opacity 0.2s ease-in-out;
-            pointer-events: none; /* Images don't need to be interactive */
-        }
+        #overlay-wrapper { display: none; width: 95%; max-width: 1200px; margin: 20px auto; }
+        #overlay-container { position: relative; background-color: #fff; border: 1px solid #ccc; }
+        #overlay-container img { position: absolute; top: 0; left: 0; width: 100%; height: 100%; transition: opacity 0.2s ease-in-out; pointer-events: none; }
+        #overlay-switch-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; margin-top: 10px; background: #fff; border: 1px solid #ccc; }
+        .switch-list-item { padding: 5px 10px; background-color: #f1f1f1; border-radius: 5px; cursor: default; font-size: 13px; }
         
-        #overlay-switch-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 15px;
-            margin-top: 10px;
+        /* --- MODIFIED: Help Screen --- */
+        #help-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.6);
+            backdrop-filter: blur(5px);
+            z-index: 100;
+            justify-content: center;
+            align-items: center;
+        }
+        .help-content {
+            position: relative;
             background: #fff;
-            border: 1px solid #ccc;
+            padding: 20px 40px;
+            border-radius: 8px;
+            max-width: 500px;
         }
-        .switch-list-item {
-            padding: 5px 10px;
-            background-color: #f1f1f1;
-            border-radius: 5px;
-            cursor: default;
-            font-size: 13px;
+        .help-content h2 { text-align: center; margin-top: 0; }
+        .help-content kbd {
+            background-color: #eee; border-radius: 3px; border: 1px solid #b4b4b4;
+            color: #333; display: inline-block; font-size: .85em; font-weight: 700;
+            line-height: 1; padding: 2px 4px; white-space: nowrap;
         }
-        
+        .help-content li { margin-bottom: 10px; }
+        #help-close-btn {
+            position: absolute; top: 10px; right: 10px; background: transparent; border: none; font-size: 24px;
+            cursor: pointer; color: #888;
+        }
+
         /* Usability Hint */
         .hint {
             position: fixed; bottom: 10px; left: 50%; transform: translateX(-50%); background: rgba(0, 0, 0, 0.7);
@@ -126,7 +126,11 @@
         <input type="text" id="filter-input">
         <div class="selector-group" id="graph-type-selector"> <button class="active" data-graph-type="traffic">Traffic</button> <button data-graph-type="uptime">Uptime</button> </div>
         <div class="selector-group" id="period-selector"> <button class="active" data-period="day">Day</button> <button data-period="week">Week</button> <button data-period="month">Month</button> <button data-period="year">Year</button> </div>
-        <div class="zoom-control"> <label for="zoom-slider">Zoom:</label> <input type="range" id="zoom-slider" min="50" max="200" value="100"> </div>
+        <div class="column-control">
+            <label for="column-slider">Cols:</label>
+            <input type="range" id="column-slider" min="1" max="9" value="4">
+            <span id="column-count">4</span>
+        </div>
         <div class="selector-group"> <button id="overlay-toggle-btn">Overlay</button> </div>
         <button id="close-btn" title="Close (Esc)">&times;</button>
     </div>
@@ -139,7 +143,21 @@
         </div>
     </main>
     
-    <div class="hint" id="hint">Start typing to filter...</div>
+    <div class="hint" id="hint">Start typing to filter. Press ? for help.</div>
+
+    <div id="help-overlay">
+        <div class="help-content">
+            <button id="help-close-btn" title="Close (Esc)">&times;</button>
+            <h2>Keyboard Shortcuts</h2>
+            <ul>
+                <li>Press any <kbd>Letter</kbd> to activate the filter bar.</li>
+                <li>Press <kbd>1</kbd> - <kbd>9</kbd> to set the number of columns.</li>
+                <li>Press <kbd>?</kbd> to show or hide this help screen.</li>
+                <li>Press <kbd>Esc</kbd> to close the filter bar or this help screen.</li>
+            </ul>
+        </div>
+    </div>
+
 
     <script>
         // --- DATA STRUCTURE ---
@@ -158,11 +176,14 @@
               overlaySwitchList = document.getElementById('overlay-switch-list'),
               filterContainer = document.getElementById('filter-container'),
               filterInput = document.getElementById('filter-input'),
-              zoomSlider = document.getElementById('zoom-slider'),
+              columnSlider = document.getElementById('column-slider'),
+              columnCount = document.getElementById('column-count'),
               graphTypeSelector = document.getElementById('graph-type-selector'),
               periodSelector = document.getElementById('period-selector'),
               overlayToggleBtn = document.getElementById('overlay-toggle-btn'),
               closeBtn = document.getElementById('close-btn'),
+              helpOverlay = document.getElementById('help-overlay'),
+              helpCloseBtn = document.getElementById('help-close-btn'),
               hint = document.getElementById('hint'),
               switchData = generateSwitchData(activeSwitchNames);
         
@@ -234,10 +255,20 @@
 
         function hideFilter() { filterInput.value = ''; filterContainer.style.display = 'none'; renderView(); }
 
+        function setColumnCount(count) {
+            grid.style.gridTemplateColumns = `repeat(${count}, 1fr)`;
+            columnSlider.value = count;
+            columnCount.textContent = count;
+        }
+
         // --- EVENT LISTENERS ---
         filterInput.addEventListener('keyup', renderView);
-        zoomSlider.addEventListener('input', () => grid.style.setProperty('--card-zoom-factor', zoomSlider.value / 100));
         closeBtn.addEventListener('click', hideFilter);
+        helpCloseBtn.addEventListener('click', () => helpOverlay.style.display = 'none');
+
+        columnSlider.addEventListener('input', (event) => {
+            setColumnCount(event.target.value);
+        });
 
         overlayToggleBtn.addEventListener('click', () => {
             isOverlayMode = !isOverlayMode;
@@ -246,21 +277,19 @@
             renderView();
         });
         
-        // --- CORRECTED OVERLAY INTERACTION ---
         overlaySwitchList.addEventListener('mouseover', (event) => {
             const target = event.target.closest('.switch-list-item');
             if (target) {
                 const targetHostId = target.dataset.hostId;
                 overlayContainer.querySelectorAll('img').forEach(img => {
                     const isTarget = img.dataset.hostId === targetHostId;
-                    img.style.opacity = isTarget ? '1' : '0'; // Only show the target
-                    img.style.mixBlendMode = isTarget ? 'normal' : 'multiply'; // Use normal blend for the target
+                    img.style.opacity = isTarget ? '1' : '0';
+                    img.style.mixBlendMode = isTarget ? 'normal' : 'multiply';
                 });
             }
         });
 
         overlaySwitchList.addEventListener('mouseleave', () => {
-            // When mouse leaves the list area, reset all to the blended view
             overlayContainer.querySelectorAll('img').forEach(img => {
                 img.style.opacity = '0.5';
                 img.style.mixBlendMode = 'multiply';
@@ -284,10 +313,31 @@
         });
 
         window.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape') { hideFilter(); return; }
+            if (event.key === 'Escape') {
+                if (helpOverlay.style.display === 'flex') {
+                    helpOverlay.style.display = 'none';
+                } else {
+                    hideFilter();
+                }
+                return;
+            }
+
             const activeEl = document.activeElement;
-            if (activeEl === filterInput || activeEl === zoomSlider || activeEl.tagName === 'BUTTON') return;
-            if (event.key.length === 1) {
+            if (activeEl === filterInput || activeEl === columnSlider) return;
+
+            if (event.key === '?') {
+                helpOverlay.style.display = helpOverlay.style.display === 'flex' ? 'none' : 'flex';
+                return;
+            }
+            
+            const numberKey = parseInt(event.key, 10);
+
+            if (!isNaN(numberKey) && numberKey >= 1 && numberKey <= 9) {
+                setColumnCount(numberKey);
+                return; 
+            }
+
+            if (activeEl.tagName !== 'BUTTON' && event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
                 filterContainer.style.display = 'flex';
                 filterInput.focus();
                 filterInput.value = event.key;
