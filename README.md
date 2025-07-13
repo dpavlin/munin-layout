@@ -6,20 +6,22 @@ It's a single, self-contained `index.html` file that can be dropped into any web
 
 ## Features
 
-*   **Immersive, Graphs-First View:** The page loads with a clean, uncluttered grid of graphs. All controls are hidden until you need them.
-*   **Instant "Type-to-Filter" Search:** Simply start typing any character to bring up the filter bar. The grid updates instantly as you type, supporting both plain text and regular expressions.
-*   **Multi-Metric and Multi-Period Views:**
-    *   **Graph Type Selector:** Instantly switch between different metrics like **Traffic** (`if_bytes`) and **Uptime**.
-    *   **Time Period Selector:** Easily toggle all graphs between `Day`, `Week`, `Month`, and `Year` views.
+*   **Immersive, Graphs-First View:** The page loads with a clean, uncluttered grid of graphs. All controls are hidden until needed.
+*   **Comprehensive Keyboard-First Controls:**
+    *   **Filter:** Start typing any letter to activate the filter bar. Supports both plain text and regular expressions.
+    *   **Layout:** Press <kbd>1</kbd> - <kbd>9</kbd> to instantly set the number of columns.
+    *   **Graph Type:** Press <kbd>T</kbd> for Traffic graphs or <kbd>U</kbd> for Uptime.
+    *   **Time Period:** Press <kbd>D</kbd>, <kbd>W</kbd>, <kbd>M</kbd>, or <kbd>Y</kbd> for Day, Week, Month, or Year views.
+    *   **Overlay Mode:** Press <kbd>O</kbd> to toggle the graph overlay comparison mode.
+    *   **Help:** Press <kbd>?</kbd> to view all keyboard shortcuts.
+    *   **Close:** Press <kbd>Esc</kbd> to close the filter bar or help screen.
+*   **Multi-Metric and Multi-Period Views:** All controls are available in the header for mouse users.
 *   **Advanced Overlay Comparison Mode:**
     *   **Blended View:** Toggling "Overlay" mode stacks all currently filtered graphs, using CSS `mix-blend-mode` to make their white backgrounds transparent. This creates a powerful composite view for spotting outliers and correlations.
-    *   **Isolate on Hover:** Below the blended graph, a list of all active switches appears. Hovering your mouse over any switch name in the list instantly isolates its graph, making it fully opaque and clear for inspection.
-*   **Dynamic Zoom and Reflow:**
-    *   An intuitive slider in the header lets you zoom the graph cards in and out.
-    *   The grid automatically reflows, calculating the optimal number of columns to fit any screen size or zoom level.
+    *   **Isolate on Hover:** Below the blended graph, a list of all active switches appears. Hovering your mouse over any switch name in the list instantly isolates its graph, making it fully opaque for clear inspection.
 *   **Zero Dependencies & Easy Setup:**
     *   The entire application is a **single, self-contained `index.html` file**.
-    *   Written in vanilla HTML, CSS, and JavaScript. No build process, dependencies, or server-side code is required.
+    *   Written in vanilla HTML, CSS, and JavaScript. No build process or server-side code is required.
 
 ## How It Works
 

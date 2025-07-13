@@ -30,7 +30,7 @@
         #filter-input { width: 30%; max-width: 300px; padding: 12px 20px; font-size: 18px; border-radius: 50px; border: 1px solid #ccc; }
         #filter-input:focus { outline: none; border-color: #007bff; }
         
-        /* --- MODIFIED: Column Control with Slider --- */
+        /* Column Control with Slider */
         .column-control { display: flex; align-items: center; gap: 10px; color: #555; }
         #column-slider { width: 120px; }
         #column-count { font-weight: bold; min-width: 20px; text-align: center; }
@@ -80,7 +80,7 @@
         #overlay-switch-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; margin-top: 10px; background: #fff; border: 1px solid #ccc; }
         .switch-list-item { padding: 5px 10px; background-color: #f1f1f1; border-radius: 5px; cursor: default; font-size: 13px; }
         
-        /* --- MODIFIED: Help Screen --- */
+        /* Help Screen */
         #help-overlay {
             display: none;
             position: fixed;
@@ -152,6 +152,9 @@
             <ul>
                 <li>Press any <kbd>Letter</kbd> to activate the filter bar.</li>
                 <li>Press <kbd>1</kbd> - <kbd>9</kbd> to set the number of columns.</li>
+                <li>Press <kbd>T</kbd> for <b>T</b>raffic graphs, <kbd>U</kbd> for <b>U</b>ptime.</li>
+                <li>Press <kbd>D</kbd>, <kbd>W</kbd>, <kbd>M</kbd>, <kbd>Y</kbd> for <b>D</b>ay, <b>W</b>eek, <b>M</b>onth, <b>Y</b>ear.</li>
+                <li>Press <kbd>O</kbd> to toggle the <b>O</b>verlay comparison mode.</li>
                 <li>Press <kbd>?</kbd> to show or hide this help screen.</li>
                 <li>Press <kbd>Esc</kbd> to close the filter bar or this help screen.</li>
             </ul>
@@ -314,11 +317,8 @@
 
         window.addEventListener('keydown', (event) => {
             if (event.key === 'Escape') {
-                if (helpOverlay.style.display === 'flex') {
-                    helpOverlay.style.display = 'none';
-                } else {
-                    hideFilter();
-                }
+                if (helpOverlay.style.display === 'flex') helpOverlay.style.display = 'none';
+                else hideFilter();
                 return;
             }
 
@@ -330,8 +330,21 @@
                 return;
             }
             
-            const numberKey = parseInt(event.key, 10);
+            // --- MODIFIED: Added all letter shortcuts ---
+            const key = event.key.toLowerCase();
+            let triggered = false;
 
+            if (key === 't') { triggered = true; graphTypeSelector.querySelector('[data-graph-type="traffic"]').click(); }
+            if (key === 'u') { triggered = true; graphTypeSelector.querySelector('[data-graph-type="uptime"]').click(); }
+            if (key === 'd') { triggered = true; periodSelector.querySelector('[data-period="day"]').click(); }
+            if (key === 'w') { triggered = true; periodSelector.querySelector('[data-period="week"]').click(); }
+            if (key === 'm') { triggered = true; periodSelector.querySelector('[data-period="month"]').click(); }
+            if (key === 'y') { triggered = true; periodSelector.querySelector('[data-period="year"]').click(); }
+            if (key === 'o') { triggered = true; overlayToggleBtn.click(); }
+            
+            if (triggered) return; // Stop if a selector shortcut was used
+
+            const numberKey = parseInt(event.key, 10);
             if (!isNaN(numberKey) && numberKey >= 1 && numberKey <= 9) {
                 setColumnCount(numberKey);
                 return; 
