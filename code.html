@@ -330,7 +330,6 @@
                 return;
             }
             
-            // --- MODIFIED: Added all letter shortcuts ---
             const key = event.key.toLowerCase();
             let triggered = false;
 
@@ -342,7 +341,7 @@
             if (key === 'y') { triggered = true; periodSelector.querySelector('[data-period="year"]').click(); }
             if (key === 'o') { triggered = true; overlayToggleBtn.click(); }
             
-            if (triggered) return; // Stop if a selector shortcut was used
+            if (triggered) return;
 
             const numberKey = parseInt(event.key, 10);
             if (!isNaN(numberKey) && numberKey >= 1 && numberKey <= 9) {
@@ -350,7 +349,8 @@
                 return; 
             }
 
-            if (activeEl.tagName !== 'BUTTON' && event.key.length === 1 && !event.ctrlKey && !event.metaKey) {
+            // --- MODIFIED: Added check for spacebar ---
+            if (activeEl.tagName !== 'BUTTON' && event.key.length === 1 && event.key !== ' ' && !event.ctrlKey && !event.metaKey) {
                 filterContainer.style.display = 'flex';
                 filterInput.focus();
                 filterInput.value = event.key;
